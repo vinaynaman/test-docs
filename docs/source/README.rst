@@ -2,10 +2,8 @@
   <img 
     width="350"
     height="80"
-    src="https://github.com/katonic-dev/katonic-feature-store/blob/opensource/docs/sources/logo.png"
-  >
+    src="https://github.com/katonic-dev/katonic-feature-store/blob/opensource/docs/sources/logo.png">
 </p>
-
 # KFS - Katonic Feature Store :bar_chart:
 
 KFS is a library which we can use in various phases of Machine Learning Project. We can use KFS to store the needed features from the Online and Offline sources and store them in Offline and Online databases. We can use these features across the Organizatoin with `low latency` and `high performance`.
@@ -32,9 +30,7 @@ It also very useful with the `Streaming` and `Real-time data` to get the neccesa
     src="https://raw.githubusercontent.com/katonic-dev/katonic-feature-store/kfs-platform-dev/workflow/kfs-workflow.png?token=GHSAT0AAAAAABRWQKY4SZ7HHAAD3PJIYKOOYSCV55A"
   >
 </p>
-
 ## User Guide (Getting Started)
-
 # Technical Stack
 
 - Python
