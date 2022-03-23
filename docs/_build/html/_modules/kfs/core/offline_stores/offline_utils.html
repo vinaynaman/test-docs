@@ -1,0 +1,319 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.core.offline_stores.offline_utils &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.core.offline_stores.offline_utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timedelta</span>
+<span class="kn">import</span> <span class="nn">importlib</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">Timestamp</span>
+<span class="kn">from</span> <span class="nn">jinja2</span> <span class="kn">import</span> <span class="n">BaseLoader</span><span class="p">,</span> <span class="n">Environment</span>
+
+<span class="kn">import</span> <span class="nn">kfs</span>
+<span class="kn">from</span> <span class="nn">kfs.errors</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">EntityTimestampInferenceException</span><span class="p">,</span>
+    <span class="n">KfsEntityDFMissingColumnsError</span><span class="p">,</span>
+    <span class="n">KfsModuleImportError</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">kfs.entities.feature_view</span> <span class="kn">import</span> <span class="n">FeatureView</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.offline_store</span> <span class="kn">import</span> <span class="n">OfflineStore</span>
+<span class="kn">from</span> <span class="nn">kfs.core.provider</span> <span class="kn">import</span> <span class="n">_get_requested_feature_views_to_features_dict</span>
+<span class="kn">from</span> <span class="nn">kfs.registry</span> <span class="kn">import</span> <span class="n">Registry</span>
+
+<span class="kn">from</span> <span class="nn">kfs.type_map</span> <span class="kn">import</span> <span class="n">arrow_to_pg_type</span>
+
+
+<span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span> <span class="o">=</span> <span class="s2">&quot;event_timestamp&quot;</span>
+
+
+<div class="viewcode-block" id="infer_event_timestamp_from_entity_df"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.infer_event_timestamp_from_entity_df">[docs]</a><span class="k">def</span> <span class="nf">infer_event_timestamp_from_entity_df</span><span class="p">(</span><span class="n">entity_schema</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span> <span class="ow">in</span> <span class="n">entity_schema</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span>
+
+    <span class="n">datetime_columns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">column</span>
+        <span class="k">for</span> <span class="n">column</span><span class="p">,</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">entity_schema</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">common</span><span class="o">.</span><span class="n">is_datetime64_any_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datetime_columns</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">EntityTimestampInferenceException</span><span class="p">(</span><span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Using </span><span class="si">{</span><span class="n">datetime_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> as the event timestamp. To specify a column explicitly, please name it </span><span class="si">{</span><span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span><span class="si">}</span><span class="s2">.&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">datetime_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="assert_expected_columns_in_entity_df"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.assert_expected_columns_in_entity_df">[docs]</a><span class="k">def</span> <span class="nf">assert_expected_columns_in_entity_df</span><span class="p">(</span>
+    <span class="n">entity_schema</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">],</span>
+    <span class="n">join_keys</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">entity_df_event_timestamp_col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">entity_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">entity_schema</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">expected_columns</span> <span class="o">=</span> <span class="n">join_keys</span> <span class="o">|</span> <span class="p">{</span><span class="n">entity_df_event_timestamp_col</span><span class="p">}</span>
+    <span class="n">missing_keys</span> <span class="o">=</span> <span class="n">expected_columns</span> <span class="o">-</span> <span class="n">entity_columns</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing_keys</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">KfsEntityDFMissingColumnsError</span><span class="p">(</span><span class="n">expected_columns</span><span class="p">,</span> <span class="n">missing_keys</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_expected_join_keys"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.get_expected_join_keys">[docs]</a><span class="k">def</span> <span class="nf">get_expected_join_keys</span><span class="p">(</span>
+    <span class="n">project</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">feature_views</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="s2">&quot;kfs.FeatureView&quot;</span><span class="p">],</span> <span class="n">registry</span><span class="p">:</span> <span class="n">Registry</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="n">join_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">feature_view</span> <span class="ow">in</span> <span class="n">feature_views</span><span class="p">:</span>
+        <span class="n">entities</span> <span class="o">=</span> <span class="n">feature_view</span><span class="o">.</span><span class="n">entities</span>
+        <span class="k">for</span> <span class="n">entity_name</span> <span class="ow">in</span> <span class="n">entities</span><span class="p">:</span>
+            <span class="c1"># TODO: update get_entity in registry</span>
+            <span class="c1"># entity = registry.get_entity(entity_name, project)</span>
+            <span class="n">join_keys</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">entity_name</span><span class="p">)</span> <span class="c1"># (entity.join_key)</span>
+    <span class="k">return</span> <span class="n">join_keys</span></div>
+
+
+<div class="viewcode-block" id="get_entity_df_timestamp_bounds"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.get_entity_df_timestamp_bounds">[docs]</a><span class="k">def</span> <span class="nf">get_entity_df_timestamp_bounds</span><span class="p">(</span>
+    <span class="n">entity_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">event_timestamp_col</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">Timestamp</span><span class="p">]:</span>
+    <span class="n">event_timestamp_series</span> <span class="o">=</span> <span class="n">entity_df</span><span class="p">[</span><span class="n">event_timestamp_col</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">event_timestamp_series</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">event_timestamp_series</span><span class="o">.</span><span class="n">max</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="FeatureViewQueryContext"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.FeatureViewQueryContext">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">FeatureViewQueryContext</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Context object used to template a BigQuery and Redshift point-in-time SQL query&quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">ttl</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">entities</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">features</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>  <span class="c1"># feature reference format</span>
+    <span class="n">event_timestamp_column</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">created_timestamp_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">table_subquery</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">entity_selections</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="get_feature_view_query_context"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.get_feature_view_query_context">[docs]</a><span class="k">def</span> <span class="nf">get_feature_view_query_context</span><span class="p">(</span>
+    <span class="n">feature_refs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">feature_views</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FeatureView</span><span class="p">],</span>
+    <span class="n">registry</span><span class="p">:</span> <span class="n">Registry</span><span class="p">,</span>
+    <span class="n">project</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">FeatureViewQueryContext</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Build a query context containing all information required to template a BigQuery and Redshift point-in-time SQL query&quot;&quot;&quot;</span>
+
+    <span class="p">(</span>
+        <span class="n">feature_views_to_feature_map</span>
+    <span class="p">)</span> <span class="o">=</span> <span class="n">_get_requested_feature_views_to_features_dict</span><span class="p">(</span>
+        <span class="n">feature_refs</span><span class="p">,</span> <span class="n">feature_views</span><span class="p">,</span> <span class="c1"># registry.list_on_demand_feature_views(project)</span>
+    <span class="p">)</span>
+
+    <span class="n">query_context</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">feature_view</span><span class="p">,</span> <span class="n">features</span> <span class="ow">in</span> <span class="n">feature_views_to_feature_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">join_keys</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">entity_selections</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># reverse_field_mapping = {</span>
+        <span class="c1">#     v: k for k, v in feature_view.input.field_mapping.items()</span>
+        <span class="c1"># }</span>
+        <span class="k">for</span> <span class="n">entity_name</span> <span class="ow">in</span> <span class="n">feature_view</span><span class="o">.</span><span class="n">entities</span><span class="p">:</span>
+            <span class="c1"># entity = registry.get_entity(entity_name, project)</span>
+            <span class="n">join_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entity_name</span><span class="p">)</span>
+            <span class="c1"># join_key_column = reverse_field_mapping.get(</span>
+            <span class="c1">#     entity.join_key, entity.join_key</span>
+            <span class="c1"># )</span>
+            <span class="n">entity_selections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entity_name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">feature_view</span><span class="o">.</span><span class="n">ttl</span><span class="p">,</span> <span class="n">timedelta</span><span class="p">):</span>
+            <span class="n">ttl_seconds</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">feature_view</span><span class="o">.</span><span class="n">ttl</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ttl_seconds</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">event_timestamp_column</span> <span class="o">=</span> <span class="n">feature_view</span><span class="o">.</span><span class="n">batch_source</span><span class="o">.</span><span class="n">event_timestamp_column</span>
+        <span class="n">created_timestamp_column</span> <span class="o">=</span> <span class="n">feature_view</span><span class="o">.</span><span class="n">batch_source</span><span class="o">.</span><span class="n">created_timestamp_column</span>
+
+        <span class="n">context</span> <span class="o">=</span> <span class="n">FeatureViewQueryContext</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">feature_view</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">ttl</span><span class="o">=</span><span class="n">ttl_seconds</span><span class="p">,</span>
+            <span class="n">entities</span><span class="o">=</span><span class="n">join_keys</span><span class="p">,</span>
+            <span class="n">features</span><span class="o">=</span><span class="n">features</span><span class="p">,</span>
+            <span class="n">event_timestamp_column</span><span class="o">=</span><span class="n">event_timestamp_column</span><span class="p">,</span>
+            <span class="n">created_timestamp_column</span><span class="o">=</span><span class="n">created_timestamp_column</span><span class="p">,</span>
+            <span class="c1"># TODO: Make created column optional and not hardcoded</span>
+            <span class="n">table_subquery</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;(SELECT * FROM </span><span class="si">{</span><span class="n">feature_view</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_offline_store)&quot;</span><span class="p">,</span>
+            <span class="n">entity_selections</span><span class="o">=</span><span class="n">entity_selections</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">query_context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">query_context</span></div>
+
+
+<div class="viewcode-block" id="build_point_in_time_query"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.build_point_in_time_query">[docs]</a><span class="k">def</span> <span class="nf">build_point_in_time_query</span><span class="p">(</span>
+    <span class="n">feature_view_query_contexts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FeatureViewQueryContext</span><span class="p">],</span>
+    <span class="n">left_table_query_string</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">entity_df_event_timestamp_col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">query_template</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">full_feature_names</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Build point-in-time query between each feature view table and the entity dataframe for Bigquery and Redshift&quot;&quot;&quot;</span>
+    <span class="n">template</span> <span class="o">=</span> <span class="n">Environment</span><span class="p">(</span><span class="n">loader</span><span class="o">=</span><span class="n">BaseLoader</span><span class="p">())</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">query_template</span><span class="p">)</span>
+
+    <span class="c1"># Add additional fields to dict</span>
+    <span class="n">template_context</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;left_table_query_string&quot;</span><span class="p">:</span> <span class="n">left_table_query_string</span><span class="p">,</span>
+        <span class="s2">&quot;entity_df_event_timestamp_col&quot;</span><span class="p">:</span> <span class="n">entity_df_event_timestamp_col</span><span class="p">,</span>
+        <span class="s2">&quot;unique_entity_keys&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">entity</span>
+            <span class="k">for</span> <span class="n">fv</span> <span class="ow">in</span> <span class="n">feature_view_query_contexts</span>
+            <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">fv</span><span class="o">.</span><span class="n">entities</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;featureviews&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="n">asdict</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="k">for</span> <span class="n">context</span> <span class="ow">in</span> <span class="n">feature_view_query_contexts</span>
+        <span class="p">],</span>
+        <span class="c1"># &quot;full_feature_names&quot;: full_feature_names,</span>
+    <span class="p">}</span>
+
+    <span class="c1"># query</span>
+    <span class="k">return</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">template_context</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_temp_entity_table_name"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.get_temp_entity_table_name">[docs]</a><span class="k">def</span> <span class="nf">get_temp_entity_table_name</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns a random table name for uploading the entity dataframe&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;kfs_entity_df_</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="get_offline_store_from_config"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.get_offline_store_from_config">[docs]</a><span class="k">def</span> <span class="nf">get_offline_store_from_config</span><span class="p">(</span><span class="n">offline_store_config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,)</span> <span class="o">-&gt;</span> <span class="n">OfflineStore</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Get the offline store from offline store config&quot;&quot;&quot;</span>
+
+    <span class="n">module_name</span> <span class="o">=</span> <span class="n">offline_store_config</span><span class="o">.</span><span class="vm">__module__</span>
+    <span class="n">qualified_name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">offline_store_config</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="n">store_class_name</span> <span class="o">=</span> <span class="n">qualified_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;Config&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module_name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># The original exception can be anything - either module not found,</span>
+        <span class="c1"># or any other kind of error happening during the module import time.</span>
+        <span class="c1"># So we should include the original error as well in the stack trace.</span>
+        <span class="k">raise</span> <span class="n">KfsModuleImportError</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="s2">&quot;OfflineStore&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+
+    <span class="c1"># Try getting the provider class definition</span>
+    <span class="k">try</span><span class="p">:</span>       
+        <span class="n">offline_store_class</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">store_class_name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="c1"># This can only be one type of error, when class_name attribute does not exist in the module</span>
+        <span class="c1"># So we don&#39;t have to include the original exception here</span>
+        <span class="k">raise</span> <span class="n">KfsModuleImportError</span><span class="p">(</span>
+            <span class="n">module_name</span><span class="p">,</span> <span class="n">store_class_name</span><span class="p">,</span> <span class="n">class_type</span><span class="o">=</span><span class="s2">&quot;OfflineStore&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">offline_store_class</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="df_to_create_table_sql"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.offline_utils.df_to_create_table_sql">[docs]</a><span class="k">def</span> <span class="nf">df_to_create_table_sql</span><span class="p">(</span><span class="n">entity_df</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">pa_table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">entity_df</span><span class="p">)</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;&quot;&quot;&quot;</span><span class="si">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">arrow_to_pg_type</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">type</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">pa_table</span><span class="o">.</span><span class="n">schema</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        CREATE TABLE &quot;</span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">&quot; (</span>
+<span class="s2">            </span><span class="si">{</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">        );</span>
+<span class="s2">        &quot;&quot;&quot;</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

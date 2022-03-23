@@ -1,0 +1,393 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>kfs.core package &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="kfs.core.offline_stores package" href="kfs.core.offline_stores.html" />
+    <link rel="prev" title="kfs package" href="kfs.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="kfs-core-package">
+<h1>kfs.core package<a class="headerlink" href="#kfs-core-package" title="Permalink to this headline">¶</a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="kfs.core.offline_stores.html">kfs.core.offline_stores package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores.dataframe_source">kfs.core.offline_stores.dataframe_source module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores.file_source">kfs.core.offline_stores.file_source module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores.file_store">kfs.core.offline_stores.file_store module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores.offline_store">kfs.core.offline_stores.offline_store module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores.offline_utils">kfs.core.offline_stores.offline_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores.postgres_source">kfs.core.offline_stores.postgres_source module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores.postgres_store">kfs.core.offline_stores.postgres_store module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores.postgres_util">kfs.core.offline_stores.postgres_util module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.offline_stores.html#module-kfs.core.offline_stores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="kfs.core.online_stores.html">kfs.core.online_stores package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.online_stores.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.online_stores.html#module-kfs.core.online_stores.helpers">kfs.core.online_stores.helpers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.online_stores.html#module-kfs.core.online_stores.online_response">kfs.core.online_stores.online_response module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.online_stores.html#module-kfs.core.online_stores.online_store">kfs.core.online_stores.online_store module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.online_stores.html#module-kfs.core.online_stores.redis">kfs.core.online_stores.redis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.online_stores.html#module-kfs.core.online_stores.sqlite">kfs.core.online_stores.sqlite module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.online_stores.html#module-kfs.core.online_stores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="kfs.core.registry.html">kfs.core.registry package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.registry.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.registry.html#module-kfs.core.registry.local">kfs.core.registry.local module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.registry.html#module-kfs.core.registry.postgres">kfs.core.registry.postgres module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfs.core.registry.html#module-kfs.core.registry">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-kfs.core.passthrough_provider">
+<span id="kfs-core-passthrough-provider-module"></span><h2>kfs.core.passthrough_provider module<a class="headerlink" href="#module-kfs.core.passthrough_provider" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.passthrough_provider.PassthroughProvider">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.passthrough_provider.</span></span><span class="sig-name descname"><span class="pre">PassthroughProvider</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/passthrough_provider.html#PassthroughProvider"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.passthrough_provider.PassthroughProvider" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kfs.core.provider.Provider" title="kfs.core.provider.Provider"><code class="xref py py-class docutils literal notranslate"><span class="pre">kfs.core.provider.Provider</span></code></a></p>
+<p>The Passthrough provider delegates all operations to the underlying online and offline stores.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.passthrough_provider.PassthroughProvider.get_historical_features">
+<span class="sig-name descname"><span class="pre">get_historical_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_views</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_refs</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_df</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">pandas.core.frame.DataFrame</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">registry</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.registry.Registry" title="kfs.registry.Registry"><span class="pre">kfs.registry.Registry</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="kfs.core.offline_stores.html#kfs.core.offline_stores.offline_store.RetrievalJob" title="kfs.core.offline_stores.offline_store.RetrievalJob"><span class="pre">kfs.core.offline_stores.offline_store.RetrievalJob</span></a></span></span><a class="reference internal" href="_modules/kfs/core/passthrough_provider.html#PassthroughProvider.get_historical_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.passthrough_provider.PassthroughProvider.get_historical_features" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.passthrough_provider.PassthroughProvider.materialize_single_feature_view">
+<span class="sig-name descname"><span class="pre">materialize_single_feature_view</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_view</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_date</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">datetime.datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_date</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">datetime.datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">registry</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.registry.Registry" title="kfs.registry.Registry"><span class="pre">kfs.registry.Registry</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kfs/core/passthrough_provider.html#PassthroughProvider.materialize_single_feature_view"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.passthrough_provider.PassthroughProvider.materialize_single_feature_view" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.passthrough_provider.PassthroughProvider.online_read">
+<span class="sig-name descname"><span class="pre">online_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_keys</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_features</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kfs/core/passthrough_provider.html#PassthroughProvider.online_read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.passthrough_provider.PassthroughProvider.online_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read feature values given an Entity Key. This is a low level interface, not
+expected to be used by the users directly.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>Data is returned as a list, one item per entity key. Each item in the list is a tuple
+of event_ts for the row, and the feature data as a dict from feature names to values.
+Values are returned as Value Dictionary.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.passthrough_provider.PassthroughProvider.online_write_batch">
+<span class="sig-name descname"><span class="pre">online_write_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kfs/core/passthrough_provider.html#PassthroughProvider.online_write_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.passthrough_provider.PassthroughProvider.online_write_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a batch of feature rows to the online store. This is a low level interface, not
+expected to be used by the users directly.</p>
+<p>If a tz-naive timestamp is passed to this method, it is assumed to be UTC.</p>
+<dl>
+<dt>Args:</dt><dd><p>config: The RepoConfig for the current FeatureStore.
+table: Feast FeatureTable
+data: a list of quadruplets containing Feature data. Each quadruplet contains an Entity Key,</p>
+<blockquote>
+<div><p>a dict containing feature values, an event timestamp for the row, and
+the created timestamp for the row if it exists.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>progress: Optional function to be called once every mini-batch of rows is written to</dt><dd><p>the online store. Can be used to display progress.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.passthrough_provider.PassthroughProvider.teardown_infra">
+<span class="sig-name descname"><span class="pre">teardown_infra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kfs/core/passthrough_provider.html#PassthroughProvider.teardown_infra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.passthrough_provider.PassthroughProvider.teardown_infra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tear down all cloud resources for a repo.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>project: Feast project to which tables belong
+tables: Tables that are declared in the feature repo.
+entities: Entities that are declared in the feature repo.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.passthrough_provider.PassthroughProvider.update_infra">
+<span class="sig-name descname"><span class="pre">update_infra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/passthrough_provider.html#PassthroughProvider.update_infra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.passthrough_provider.PassthroughProvider.update_infra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reconcile cloud resources with the objects declared in the feature repo.</p>
+<dl>
+<dt>Args:</dt><dd><p>project: Project to which tables belong
+tables_to_delete: Tables that were deleted from the feature repo, so provider needs to</p>
+<blockquote>
+<div><p>clean up the corresponding cloud resources.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>tables_to_keep: Tables that are still in the feature repo. Depending on implementation,</dt><dd><p>provider may or may not need to update the corresponding resources.</p>
+</dd>
+<dt>entities_to_delete: Entities that were deleted from the feature repo, so provider needs to</dt><dd><p>clean up the corresponding cloud resources.</p>
+</dd>
+<dt>entities_to_keep: Entities that are still in the feature repo. Depending on implementation,</dt><dd><p>provider may or may not need to update the corresponding resources.</p>
+</dd>
+<dt>partial: if true, then tables_to_delete and tables_to_keep are <em>not</em> exhaustive lists.</dt><dd><p>There may be other tables that are not touched by this update.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.passthrough_provider.PassthroughProvider.write_offline_features_data">
+<span class="sig-name descname"><span class="pre">write_offline_features_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">pandas.core.frame.DataFrame</span><span class="p"><span class="pre">,</span> </span><span class="pre">pyspark.sql.dataframe.DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kfs/core/passthrough_provider.html#PassthroughProvider.write_offline_features_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.passthrough_provider.PassthroughProvider.write_offline_features_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reconcile cloud resources with the objects declared in the feature repo.</p>
+<dl>
+<dt>Args:</dt><dd><p>project: Project to which tables belong
+tables_to_delete: Tables that were deleted from the feature repo, so provider needs to</p>
+<blockquote>
+<div><p>clean up the corresponding cloud resources.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>tables_to_keep: Tables that are still in the feature repo. Depending on implementation,</dt><dd><p>provider may or may not need to update the corresponding resources.</p>
+</dd>
+<dt>entities_to_delete: Entities that were deleted from the feature repo, so provider needs to</dt><dd><p>clean up the corresponding cloud resources.</p>
+</dd>
+<dt>entities_to_keep: Entities that are still in the feature repo. Depending on implementation,</dt><dd><p>provider may or may not need to update the corresponding resources.</p>
+</dd>
+<dt>partial: if true, then tables_to_delete and tables_to_keep are <em>not</em> exhaustive lists.</dt><dd><p>There may be other tables that are not touched by this update.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-kfs.core.provider">
+<span id="kfs-core-provider-module"></span><h2>kfs.core.provider module<a class="headerlink" href="#module-kfs.core.provider" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.provider.Provider">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.provider.</span></span><span class="sig-name descname"><span class="pre">Provider</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/provider.html#Provider"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.Provider" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.provider.Provider.get_historical_features">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">get_historical_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_views</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_refs</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_df</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">pandas.core.frame.DataFrame</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">registry</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.registry.Registry" title="kfs.registry.Registry"><span class="pre">kfs.registry.Registry</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="kfs.core.offline_stores.html#kfs.core.offline_stores.offline_store.RetrievalJob" title="kfs.core.offline_stores.offline_store.RetrievalJob"><span class="pre">kfs.core.offline_stores.offline_store.RetrievalJob</span></a></span></span><a class="reference internal" href="_modules/kfs/core/provider.html#Provider.get_historical_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.Provider.get_historical_features" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.provider.Provider.materialize_single_feature_view">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">materialize_single_feature_view</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_view</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_date</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">datetime.datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_date</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">datetime.datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">registry</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.registry.Registry" title="kfs.registry.Registry"><span class="pre">kfs.registry.Registry</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kfs/core/provider.html#Provider.materialize_single_feature_view"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.Provider.materialize_single_feature_view" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.provider.Provider.online_read">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">online_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_keys</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_features</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kfs/core/provider.html#Provider.online_read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.Provider.online_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read feature values given an Entity Key. This is a low level interface, not
+expected to be used by the users directly.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>Data is returned as a list, one item per entity key. Each item in the list is a tuple
+of event_ts for the row, and the feature data as a dict from feature names to values.
+Values are returned as Value Dictionary.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.provider.Provider.online_write_batch">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">online_write_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kfs/core/provider.html#Provider.online_write_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.Provider.online_write_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a batch of feature rows to the online store. This is a low level interface, not
+expected to be used by the users directly.</p>
+<p>If a tz-naive timestamp is passed to this method, it is assumed to be UTC.</p>
+<dl>
+<dt>Args:</dt><dd><p>config: The RepoConfig for the current FeatureStore.
+table: Feast FeatureTable
+data: a list of quadruplets containing Feature data. Each quadruplet contains an Entity Key,</p>
+<blockquote>
+<div><p>a dict containing feature values, an event timestamp for the row, and
+the created timestamp for the row if it exists.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>progress: Optional function to be called once every mini-batch of rows is written to</dt><dd><p>the online store. Can be used to display progress.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.provider.Provider.teardown_infra">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">teardown_infra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/provider.html#Provider.teardown_infra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.Provider.teardown_infra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tear down all cloud resources for a repo.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>project: Feast project to which tables belong
+tables: Tables that are declared in the feature repo.
+entities: Entities that are declared in the feature repo.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.provider.Provider.update_infra">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">update_infra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/provider.html#Provider.update_infra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.Provider.update_infra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reconcile cloud resources with the objects declared in the feature repo.</p>
+<dl>
+<dt>Args:</dt><dd><p>project: Project to which tables belong
+tables_to_delete: Tables that were deleted from the feature repo, so provider needs to</p>
+<blockquote>
+<div><p>clean up the corresponding cloud resources.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>tables_to_keep: Tables that are still in the feature repo. Depending on implementation,</dt><dd><p>provider may or may not need to update the corresponding resources.</p>
+</dd>
+<dt>entities_to_delete: Entities that were deleted from the feature repo, so provider needs to</dt><dd><p>clean up the corresponding cloud resources.</p>
+</dd>
+<dt>entities_to_keep: Entities that are still in the feature repo. Depending on implementation,</dt><dd><p>provider may or may not need to update the corresponding resources.</p>
+</dd>
+<dt>partial: if true, then tables_to_delete and tables_to_keep are <em>not</em> exhaustive lists.</dt><dd><p>There may be other tables that are not touched by this update.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.provider.Provider.write_offline_features_data">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">write_offline_features_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">pandas.core.frame.DataFrame</span><span class="p"><span class="pre">,</span> </span><span class="pre">pyspark.sql.dataframe.DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kfs/core/provider.html#Provider.write_offline_features_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.Provider.write_offline_features_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reconcile cloud resources with the objects declared in the feature repo.</p>
+<dl>
+<dt>Args:</dt><dd><p>project: Project to which tables belong
+tables_to_delete: Tables that were deleted from the feature repo, so provider needs to</p>
+<blockquote>
+<div><p>clean up the corresponding cloud resources.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>tables_to_keep: Tables that are still in the feature repo. Depending on implementation,</dt><dd><p>provider may or may not need to update the corresponding resources.</p>
+</dd>
+<dt>entities_to_delete: Entities that were deleted from the feature repo, so provider needs to</dt><dd><p>clean up the corresponding cloud resources.</p>
+</dd>
+<dt>entities_to_keep: Entities that are still in the feature repo. Depending on implementation,</dt><dd><p>provider may or may not need to update the corresponding resources.</p>
+</dd>
+<dt>partial: if true, then tables_to_delete and tables_to_keep are <em>not</em> exhaustive lists.</dt><dd><p>There may be other tables that are not touched by this update.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kfs.core.provider.get_provider">
+<span class="sig-prename descclassname"><span class="pre">kfs.core.provider.</span></span><span class="sig-name descname"><span class="pre">get_provider</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">repo_path</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pathlib.Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kfs.core.provider.Provider" title="kfs.core.provider.Provider"><span class="pre">kfs.core.provider.Provider</span></a></span></span><a class="reference internal" href="_modules/kfs/core/provider.html#get_provider"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.provider.get_provider" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-kfs.core">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-kfs.core" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">kfs</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="kfs.html">kfs package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">kfs</a><ul>
+  <li><a href="kfs.html">kfs package</a><ul>
+      <li>Previous: <a href="kfs.html" title="previous chapter">kfs package</a></li>
+      <li>Next: <a href="kfs.core.offline_stores.html" title="next chapter">kfs.core.offline_stores package</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/kfs.core.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

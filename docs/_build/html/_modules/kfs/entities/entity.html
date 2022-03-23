@@ -1,0 +1,299 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.entities.entity &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css" />
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.entities.entity</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">kfs.value_type</span> <span class="kn">import</span> <span class="n">ValueType</span>
+
+
+<div class="viewcode-block" id="Entity"><a class="viewcode-back" href="../../../kfs.entities.html#kfs.entities.entity.Entity">[docs]</a><span class="k">class</span> <span class="nc">Entity</span><span class="p">:</span>
+
+    <span class="n">_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">_value_type</span><span class="p">:</span> <span class="n">ValueType</span>
+    <span class="n">_description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1"># _join_key: str</span>
+    <span class="c1"># _labels: Dict[str, str]</span>
+    <span class="c1"># _created_timestamp: Optional[datetime]</span>
+    <span class="c1"># _last_updated_timestamp: Optional[datetime]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value_type</span><span class="p">:</span> <span class="n">ValueType</span> <span class="o">=</span> <span class="n">ValueType</span><span class="o">.</span><span class="n">UNKNOWN</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an Entity object.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value_type</span> <span class="o">=</span> <span class="n">value_type</span>
+        <span class="c1"># if join_key:</span>
+        <span class="c1">#     self._join_key = join_key</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     self._join_key = name</span>
+
+        <span class="c1"># if labels is None:</span>
+        <span class="c1">#     self._labels = dict()</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     self._labels = labels</span>
+
+        <span class="c1"># self._created_timestamp: Optional[datetime] = None</span>
+        <span class="c1"># self._last_updated_timestamp: Optional[datetime] = None</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Entity</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;Comparisons should only involve Entity class objects.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">description</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">value_type</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">value_type</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the name of this entity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+
+    <span class="nd">@name</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the name of this entity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the description of this entity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span>
+
+    <span class="nd">@description</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the description of this entity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">description</span>
+
+    <span class="c1"># @property</span>
+    <span class="c1"># def join_key(self) -&gt; str:</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     Gets the join key of this entity.</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     return self._join_key</span>
+
+    <span class="c1"># @join_key.setter</span>
+    <span class="c1"># def join_key(self, join_key):</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     Sets the join key of this entity.</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     self._join_key = join_key</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ValueType</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the type of this entity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_type</span>
+
+    <span class="nd">@value_type</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">value_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value_type</span><span class="p">:</span> <span class="n">ValueType</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the type of this entity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value_type</span> <span class="o">=</span> <span class="n">value_type</span>
+
+    <span class="c1"># @property</span>
+    <span class="c1"># def labels(self) -&gt; Dict[str, str]:</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     Gets the labels of this entity.</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     return self._labels</span>
+
+    <span class="c1"># @labels.setter</span>
+    <span class="c1"># def labels(self, labels: Dict[str, str]):</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     Sets the labels of this entity.</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     self._labels = labels</span>
+
+    <span class="c1"># @property</span>
+    <span class="c1"># def created_timestamp(self) -&gt; Optional[datetime]:</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     Gets the created_timestamp of this entity.</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     return self._created_timestamp</span>
+
+    <span class="c1"># @property</span>
+    <span class="c1"># def last_updated_timestamp(self) -&gt; Optional[datetime]:</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     Gets the last_updated_timestamp of this entity.</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     return self._last_updated_timestamp</span>
+
+<div class="viewcode-block" id="Entity.is_valid"><a class="viewcode-back" href="../../../kfs.entities.html#kfs.entities.entity.Entity.is_valid">[docs]</a>    <span class="k">def</span> <span class="nf">is_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validates the state of this entity locally.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: The entity does not have a name or does not have a type.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No name found in entity.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">value_type</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No type found in entity </span><span class="si">{self.value_type}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Entity.to_dict"><a class="viewcode-back" href="../../../kfs.entities.html#kfs.entities.entity.Entity.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Converts entity to dict.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary object representation of entity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if self.created_timestamp:</span>
+        <span class="c1">#     entity[&quot;created_timestamp&quot;] = self.created_timestamp</span>
+
+        <span class="c1"># if self.last_updated_timestamp:</span>
+        <span class="c1">#     entity[&quot;created_timestamp&quot;] = self.last_updated_timestamp</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="p">,</span>
+            <span class="s2">&quot;value_type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_type</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="Entity.from_dict"><a class="viewcode-back" href="../../../kfs.entities.html#kfs.entities.entity.Entity.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">entity_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates an entity from a Dictionary representation of an entity.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            entity_dict: A Dictionary representation of an entity.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            An EntityV2 object based on the entity details.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">entity_dict</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">entity_dict</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">value_type</span><span class="o">=</span><span class="n">ValueType</span><span class="p">(</span><span class="n">entity_dict</span><span class="o">.</span><span class="n">value_type</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Entity.to_yaml"><a class="viewcode-back" href="../../../kfs.entities.html#kfs.entities.entity.Entity.to_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">to_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Converts a entity to a YAML string.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            An entity string returned in YAML format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">entity_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">entity_dict</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

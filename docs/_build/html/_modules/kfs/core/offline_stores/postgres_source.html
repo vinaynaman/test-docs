@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.core.offline_stores.postgres_source &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.core.offline_stores.postgres_source</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.postgres_util</span> <span class="kn">import</span> <span class="n">get_postgres_conn</span>
+
+<span class="kn">from</span> <span class="nn">kfs.data_source</span> <span class="kn">import</span> <span class="n">DataSource</span><span class="p">,</span> <span class="n">SourceType</span>
+<span class="kn">from</span> <span class="nn">kfs.repo_config</span> <span class="kn">import</span> <span class="n">RepoConfig</span>
+<span class="kn">from</span> <span class="nn">kfs.type_map</span> <span class="kn">import</span> <span class="n">pg_type_code_to_pg_type</span><span class="p">,</span> <span class="n">pg_type_to_kfs_value_type</span>
+<span class="kn">from</span> <span class="nn">kfs.value_type</span> <span class="kn">import</span> <span class="n">ValueType</span>
+
+
+<div class="viewcode-block" id="PostgreSQLSource"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLSource">[docs]</a><span class="k">class</span> <span class="nc">PostgreSQLSource</span><span class="p">(</span><span class="n">DataSource</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">event_timestamp_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="c1"># necessary parameter</span>
+        <span class="n">created_timestamp_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="c1"># table_ref: Optional[str] = None,</span>
+        <span class="c1"># field_mapping: Optional[Dict[str, str]] = None,</span>
+        <span class="c1"># date_partition_column: Optional[str] = &quot;&quot;,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_postgres_options</span> <span class="o">=</span> <span class="n">PostgreSQLOptions</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">event_timestamp_column</span><span class="p">,</span>
+            <span class="n">created_timestamp_column</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">PostgreSQLSource</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;Comparisons should only involve BigQuerySource class objects.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_postgres_options</span><span class="o">.</span><span class="n">query</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_postgres_options</span><span class="o">.</span><span class="n">_query</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_timestamp_column</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">event_timestamp_column</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_timestamp_column</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">created_timestamp_column</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="PostgreSQLSource.from_dict"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLSource.from_dict">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="n">data_source</span><span class="p">:</span> <span class="n">Dict</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="s2">&quot;custom_options&quot;</span> <span class="ow">in</span> <span class="n">data_source</span>
+
+        <span class="n">postgres_options</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s2">&quot;custom_options&quot;</span><span class="p">][</span><span class="s2">&quot;configuration&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">PostgreSQLSource</span><span class="p">(</span>
+            <span class="n">query</span><span class="o">=</span><span class="n">postgres_options</span><span class="p">[</span><span class="s2">&quot;query&quot;</span><span class="p">],</span>
+            <span class="n">event_timestamp_column</span><span class="o">=</span><span class="n">data_source</span><span class="p">[</span><span class="s2">&quot;event_timestamp_column&quot;</span><span class="p">],</span>
+            <span class="n">created_timestamp_column</span><span class="o">=</span><span class="n">data_source</span><span class="p">[</span><span class="s2">&quot;created_timestamp_column&quot;</span><span class="p">],</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="PostgreSQLSource.to_dict"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLSource.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">SourceType</span><span class="o">.</span><span class="n">BATCH_FILE</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;custom_options&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_postgres_options</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span>
+            <span class="s2">&quot;event_timestamp_column&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_timestamp_column</span><span class="p">,</span>
+            <span class="s2">&quot;created_timestamp_column&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_timestamp_column</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="PostgreSQLSource.validate"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLSource.validate">[docs]</a>    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="PostgreSQLSource.source_datatype_to_kfs_value_type"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLSource.source_datatype_to_kfs_value_type">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">source_datatype_to_kfs_value_type</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">ValueType</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">pg_type_to_kfs_value_type</span></div>
+
+<div class="viewcode-block" id="PostgreSQLSource.get_table_column_names_and_types"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLSource.get_table_column_names_and_types">[docs]</a>    <span class="k">def</span> <span class="nf">get_table_column_names_and_types</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+        <span class="k">with</span> <span class="n">get_postgres_conn</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">offline_store</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+            <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;SELECT * FROM (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">get_table_query_string</span><span class="p">()</span><span class="si">}</span><span class="s2">) AS sub LIMIT 0&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pg_type_code_to_pg_type</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">type_code</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cur</span><span class="o">.</span><span class="n">description</span>
+            <span class="p">)</span></div>
+    
+<div class="viewcode-block" id="PostgreSQLSource.get_table_query_string"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLSource.get_table_query_string">[docs]</a>    <span class="k">def</span> <span class="nf">get_table_query_string</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_postgres_options</span><span class="o">.</span><span class="n">_query</span><span class="si">}</span><span class="s2">)&quot;</span></div></div>
+    
+
+<div class="viewcode-block" id="PostgreSQLOptions"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLOptions">[docs]</a><span class="k">class</span> <span class="nc">PostgreSQLOptions</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    DataSource PostgreSQL options used to source features from PostgreSQL query</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_query</span> <span class="o">=</span> <span class="n">query</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the BigQuery SQL query referenced by this source</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query</span>
+
+    <span class="nd">@query</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the BigQuery SQL query referenced by this source</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_query</span> <span class="o">=</span> <span class="n">query</span>
+
+<div class="viewcode-block" id="PostgreSQLOptions.from_dict"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLOptions.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">postgres_options_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">):</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">postgres_options_dict</span><span class="p">[</span><span class="s2">&quot;configuration&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;query&quot;</span><span class="p">],)</span></div>
+
+<div class="viewcode-block" id="PostgreSQLOptions.to_dict"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_source.PostgreSQLOptions.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;configuration&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="p">},</span>
+        <span class="p">}</span></div></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,378 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.repo_config &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.repo_config</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql.functions</span> <span class="kn">import</span> <span class="n">user</span>
+
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+<span class="kn">from</span> <span class="nn">pydantic.types</span> <span class="kn">import</span> <span class="n">StrictStr</span><span class="p">,</span> <span class="n">StrictInt</span>
+<span class="kn">from</span> <span class="nn">pydantic.class_validators</span> <span class="kn">import</span> <span class="n">root_validator</span><span class="p">,</span> <span class="n">validator</span>
+<span class="kn">from</span> <span class="nn">pydantic.error_wrappers</span> <span class="kn">import</span> <span class="n">ErrorWrapper</span><span class="p">,</span> <span class="n">ValidationError</span>
+
+<span class="kn">from</span> <span class="nn">kfs.importer</span> <span class="kn">import</span> <span class="n">get_class_from_type</span>
+
+
+<span class="n">ONLINE_STORE_CLASS_FOR_TYPE</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;sqlite&quot;</span><span class="p">:</span> <span class="s2">&quot;kfs.core.online_stores.sqlite.SqliteOnlineStore&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;redis&quot;</span><span class="p">:</span> <span class="s2">&quot;kfs.core.online_stores.redis.RedisOnlineStore&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">OFFLINE_STORE_CLASS_FOR_TYPE</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="s2">&quot;kfs.core.offline_stores.file_store.FileOfflineStore&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;postgres&quot;</span><span class="p">:</span> <span class="s2">&quot;kfs.core.offline_stores.postgres_store.PostgreSQLOfflineStore&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="KFSBaseModel"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.KFSBaseModel">[docs]</a><span class="k">class</span> <span class="nc">KFSBaseModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Kfs Pydantic Configuration Class &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="KFSBaseModel.Config"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.KFSBaseModel.Config">[docs]</a>    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">arbitrary_types_allowed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="s2">&quot;allow&quot;</span></div></div>
+
+
+<div class="viewcode-block" id="KfsConfigBaseModel"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.KfsConfigBaseModel">[docs]</a><span class="k">class</span> <span class="nc">KfsConfigBaseModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Feast Pydantic Configuration Class &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="KfsConfigBaseModel.Config"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.KfsConfigBaseModel.Config">[docs]</a>    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">arbitrary_types_allowed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="s2">&quot;forbid&quot;</span></div></div>
+
+
+<div class="viewcode-block" id="RegistryConfig"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.RegistryConfig">[docs]</a><span class="k">class</span> <span class="nc">RegistryConfig</span><span class="p">(</span><span class="n">KFSBaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Metadata Store Configuration. Configuration that relates to reading from and writing to the KFS registry.&quot;&quot;&quot;</span>
+
+    <span class="n">registry_store_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;postgres&#39;</span>
+    <span class="sd">&quot;&quot;&quot; str: Provider name or a class name that implements RegistryStore. &quot;&quot;&quot;</span>
+
+    <span class="n">path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span>
+    <span class="sd">&quot;&quot;&quot; str: Path to metadata store. Can be a local path, or remote object storage path, e.g. a GCS URI &quot;&quot;&quot;</span>
+
+    <span class="n">host</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span>
+    <span class="sd">&quot;&quot;&quot; str: Host of metadata store. Can be a local host, or remote storage host &quot;&quot;&quot;</span>
+    
+    <span class="n">port</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictInt</span><span class="p">]</span>
+    <span class="sd">&quot;&quot;&quot; str: Port of metadata store. Can be a local port, or remote storage port &quot;&quot;&quot;</span>
+
+    <span class="n">db</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span>
+    <span class="sd">&quot;&quot;&quot; str: Database Name of metadata store. Can be a local database name, or remote storage database name &quot;&quot;&quot;</span>
+
+    <span class="n">user</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span>
+    <span class="sd">&quot;&quot;&quot; str: Database User of metadata store. Can be a local database user name, or remote storage database user name &quot;&quot;&quot;</span>
+
+    <span class="n">password</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span>
+    <span class="sd">&quot;&quot;&quot; str: Password of metadata store. Can be a local password for your database, or remote storage password &quot;&quot;&quot;</span>
+
+    <span class="n">db_schema</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;public&quot;</span>
+    <span class="sd">&quot;&quot;&quot; str: Database schema of metadata store. Can be a specific  database Schema, or &#39;public&#39; &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="RepoConfig"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.RepoConfig">[docs]</a><span class="k">class</span> <span class="nc">RepoConfig</span><span class="p">(</span><span class="n">KFSBaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Repo config. Typically loaded from `feature_store.yaml` &quot;&quot;&quot;</span>
+
+    <span class="n">registry</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="sd">&quot;&quot;&quot; str: Path to metadata store. Can be a local path, or remote object storage path, e.g. a GCS URI &quot;&quot;&quot;</span>
+
+    <span class="n">project</span><span class="p">:</span> <span class="n">StrictStr</span>
+    <span class="sd">&quot;&quot;&quot; str: Feast project id. This can be any alphanumeric string up to 16 characters.</span>
+<span class="sd">        You can have multiple independent feature repositories deployed to the same cloud</span>
+<span class="sd">        provider account, as long as they have different project ids.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">description</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span>
+    <span class="sd">&quot;&quot;&quot; str: User name. &quot;&quot;&quot;</span>
+    
+    <span class="n">user_name</span><span class="p">:</span> <span class="n">StrictStr</span>
+    <span class="sd">&quot;&quot;&quot; str: User name. &quot;&quot;&quot;</span>
+
+    <span class="c1"># provider: StrictStr</span>
+    <span class="sd">&quot;&quot;&quot; str: local or gcp or aws &quot;&quot;&quot;</span>
+
+    <span class="n">online_store</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="sd">&quot;&quot;&quot; OnlineStoreConfig: Online store configuration (optional depending on provider) &quot;&quot;&quot;</span>
+
+    <span class="n">offline_store</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="sd">&quot;&quot;&quot; OfflineStoreConfig: Offline store configuration (optional depending on provider) &quot;&quot;&quot;</span>
+
+    <span class="n">repo_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">online_store</span><span class="p">,</span> <span class="n">Dict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">online_store</span> <span class="o">=</span> <span class="n">get_online_config_from_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">online_store</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">])(</span>
+                <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">online_store</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">online_store</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">online_store</span> <span class="o">=</span> <span class="n">get_online_config_from_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">online_store</span><span class="p">)()</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offline_store</span><span class="p">,</span> <span class="n">Dict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">offline_store</span> <span class="o">=</span> <span class="n">get_offline_config_from_type</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">offline_store</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+            <span class="p">)(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">offline_store</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offline_store</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">offline_store</span> <span class="o">=</span> <span class="n">get_offline_config_from_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offline_store</span><span class="p">)()</span>
+
+<div class="viewcode-block" id="RepoConfig.get_registry_config"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.RepoConfig.get_registry_config">[docs]</a>    <span class="k">def</span> <span class="nf">get_registry_config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># issue</span>
+        <span class="c1"># if not isinstance(self.registry, str):</span>
+        <span class="c1">#     return self.registry</span>
+
+        <span class="c1"># if self.provider == &quot;local&quot;:</span>
+        <span class="c1">#     return RegistryConfig(path=self.registry)</span>
+        <span class="c1"># elif self.provider == &quot;postgres&quot;:</span>
+        <span class="k">return</span> <span class="n">RegistryConfig</span><span class="p">(</span>
+            <span class="c1"># registry_store_type=self.provider, </span>
+            <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">[</span><span class="s2">&quot;host&quot;</span><span class="p">],</span> 
+            <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">[</span><span class="s2">&quot;port&quot;</span><span class="p">],</span> 
+            <span class="n">db</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">[</span><span class="s2">&quot;db_name&quot;</span><span class="p">],</span> 
+            <span class="n">user</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">[</span><span class="s2">&quot;user&quot;</span><span class="p">],</span> 
+            <span class="n">password</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">[</span><span class="s2">&quot;password&quot;</span><span class="p">],</span>
+            <span class="n">db_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">[</span><span class="s2">&quot;db_schema&quot;</span><span class="p">],</span>
+            <span class="p">)</span></div>
+
+    <span class="nd">@root_validator</span><span class="p">(</span><span class="n">pre</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_validate_online_store_config</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+
+        <span class="c1"># Set empty online_store config if it isn&#39;t set explicitly</span>
+        <span class="k">if</span> <span class="s2">&quot;online_store&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;online_store&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Skip if we aren&#39;t creating the configuration from a dict</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="s2">&quot;online_store&quot;</span><span class="p">],</span> <span class="n">Dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">values</span>
+
+        <span class="c1"># Make sure that the provider configuration is set. We need it to set the defaults</span>
+        <span class="c1"># assert &quot;provider&quot; in values</span>
+
+        <span class="c1"># Set the default type</span>
+        <span class="c1"># This is only direct reference to a provider or online store that we should have</span>
+        <span class="c1"># for backwards compatibility.</span>
+        <span class="k">if</span> <span class="s2">&quot;type&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="s2">&quot;online_store&quot;</span><span class="p">]:</span>
+            <span class="c1"># if values[&quot;provider&quot;] == &quot;local&quot;:</span>
+            <span class="c1">#     values[&quot;online_store&quot;][&quot;type&quot;] = &quot;sqlite&quot;</span>
+            <span class="c1"># elif values[&quot;provider&quot;] == &quot;postgres&quot;:</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;online_store&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;redis&quot;</span>
+
+        <span class="n">online_store_type</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="s2">&quot;online_store&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Validate the dict to ensure one of the union types match</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">online_config_class</span> <span class="o">=</span> <span class="n">get_online_config_from_type</span><span class="p">(</span><span class="n">online_store_type</span><span class="p">)</span>
+            <span class="n">online_config_class</span><span class="p">(</span><span class="o">**</span><span class="n">values</span><span class="p">[</span><span class="s2">&quot;online_store&quot;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">ErrorWrapper</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;online_store&quot;</span><span class="p">)],</span> <span class="n">model</span><span class="o">=</span><span class="n">RepoConfig</span><span class="p">,</span>
+            <span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+
+        <span class="k">return</span> <span class="n">values</span>
+
+    <span class="nd">@root_validator</span><span class="p">(</span><span class="n">pre</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_validate_offline_store_config</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+        <span class="c1"># Set empty offline_store config if it isn&#39;t set explicitly</span>
+        <span class="k">if</span> <span class="s2">&quot;offline_store&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;offline_store&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Skip if we aren&#39;t creating the configuration from a dict</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="s2">&quot;offline_store&quot;</span><span class="p">],</span> <span class="n">Dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">values</span>
+
+        <span class="c1"># Make sure that the provider configuration is set. We need it to set the defaults</span>
+        <span class="c1"># assert &quot;provider&quot; in values</span>
+
+        <span class="c1"># Set the default type</span>
+        <span class="k">if</span> <span class="s2">&quot;type&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="s2">&quot;offline_store&quot;</span><span class="p">]:</span>
+            <span class="c1"># if values[&quot;provider&quot;] == &quot;local&quot;:</span>
+            <span class="c1">#     values[&quot;offline_store&quot;][&quot;type&quot;] = &quot;file&quot;</span>
+            <span class="c1"># elif values[&quot;provider&quot;] == &quot;postgres&quot;:</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;offline_store&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;postgres&quot;</span>
+
+        <span class="n">offline_store_type</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="s2">&quot;offline_store&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Validate the dict to ensure one of the union types match</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">offline_config_class</span> <span class="o">=</span> <span class="n">get_offline_config_from_type</span><span class="p">(</span><span class="n">offline_store_type</span><span class="p">)</span>
+            <span class="n">offline_config_class</span><span class="p">(</span><span class="o">**</span><span class="n">values</span><span class="p">[</span><span class="s2">&quot;offline_store&quot;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">ErrorWrapper</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;offline_store&quot;</span><span class="p">)],</span> <span class="n">model</span><span class="o">=</span><span class="n">RepoConfig</span><span class="p">,</span>
+            <span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+
+        <span class="k">return</span> <span class="n">values</span>
+
+    <span class="nd">@validator</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_validate_project_name</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">kfs.utils</span> <span class="kn">import</span> <span class="n">is_valid_name</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_valid_name</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Project name, </span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">, should only have &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;alphanumerical values and underscores but not start with an underscore.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span>
+
+<div class="viewcode-block" id="RepoConfig.write_to_path"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.RepoConfig.write_to_path">[docs]</a>    <span class="k">def</span> <span class="nf">write_to_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repo_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+        <span class="n">config_path</span> <span class="o">=</span> <span class="n">repo_path</span> <span class="o">/</span> <span class="s2">&quot;feature_store.yaml&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span>
+                <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">json</span><span class="p">(</span>
+                        <span class="n">exclude</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repo_path&quot;</span><span class="p">},</span>
+                        <span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">exclude_unset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">exclude_defaults</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">f</span><span class="p">,</span>
+                <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="KFSConfigError"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.KFSConfigError">[docs]</a><span class="k">class</span> <span class="nc">KFSConfigError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_message</span><span class="p">,</span> <span class="n">config_path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_error_message</span> <span class="o">=</span> <span class="n">error_message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config_path</span> <span class="o">=</span> <span class="n">config_path</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_error_message</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_error_message</span><span class="si">}</span><span class="se">\n</span><span class="s2">at </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config_path</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;KfsConfigError(</span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_error_message</span><span class="p">)</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_config_path</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_data_source_class_from_type"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.get_data_source_class_from_type">[docs]</a><span class="k">def</span> <span class="nf">get_data_source_class_from_type</span><span class="p">(</span><span class="n">data_source_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="n">module_name</span><span class="p">,</span> <span class="n">config_class_name</span> <span class="o">=</span> <span class="n">data_source_type</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">get_class_from_type</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="n">config_class_name</span><span class="p">,</span> <span class="s2">&quot;Source&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_online_config_from_type"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.get_online_config_from_type">[docs]</a><span class="k">def</span> <span class="nf">get_online_config_from_type</span><span class="p">(</span><span class="n">online_store_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">online_store_type</span> <span class="ow">in</span> <span class="n">ONLINE_STORE_CLASS_FOR_TYPE</span><span class="p">:</span>
+        <span class="n">online_store_type</span> <span class="o">=</span> <span class="n">ONLINE_STORE_CLASS_FOR_TYPE</span><span class="p">[</span><span class="n">online_store_type</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">online_store_type</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;OnlineStore&quot;</span><span class="p">)</span>
+    <span class="n">module_name</span><span class="p">,</span> <span class="n">online_store_class_type</span> <span class="o">=</span> <span class="n">online_store_type</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">config_class_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">online_store_class_type</span><span class="si">}</span><span class="s2">Config&quot;</span>
+
+    <span class="k">return</span> <span class="n">get_class_from_type</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="n">config_class_name</span><span class="p">,</span> <span class="n">config_class_name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_offline_config_from_type"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.get_offline_config_from_type">[docs]</a><span class="k">def</span> <span class="nf">get_offline_config_from_type</span><span class="p">(</span><span class="n">offline_store_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">offline_store_type</span> <span class="ow">in</span> <span class="n">OFFLINE_STORE_CLASS_FOR_TYPE</span><span class="p">:</span>
+        <span class="n">offline_store_type</span> <span class="o">=</span> <span class="n">OFFLINE_STORE_CLASS_FOR_TYPE</span><span class="p">[</span><span class="n">offline_store_type</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">offline_store_type</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;OfflineStore&quot;</span><span class="p">)</span>
+    <span class="n">module_name</span><span class="p">,</span> <span class="n">offline_store_class_type</span> <span class="o">=</span> <span class="n">offline_store_type</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">config_class_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">offline_store_class_type</span><span class="si">}</span><span class="s2">Config&quot;</span>
+
+    <span class="k">return</span> <span class="n">get_class_from_type</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="n">config_class_name</span><span class="p">,</span> <span class="n">config_class_name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="load_repo_config"><a class="viewcode-back" href="../../kfs.html#kfs.repo_config.load_repo_config">[docs]</a><span class="k">def</span> <span class="nf">load_repo_config</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RepoConfig</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">RepoConfig</span><span class="p">(</span><span class="o">**</span><span class="n">config</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">KFSConfigError</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

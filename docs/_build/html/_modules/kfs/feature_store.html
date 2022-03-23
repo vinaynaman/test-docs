@@ -1,0 +1,652 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.feature_store &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.feature_store</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span><span class="p">,</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">colorama</span> <span class="kn">import</span> <span class="n">Fore</span><span class="p">,</span> <span class="n">Style</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.dataframe_source</span> <span class="kn">import</span> <span class="n">DataFrameSource</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.offline_store</span> <span class="kn">import</span> <span class="n">RetrievalJob</span>
+<span class="kn">from</span> <span class="nn">kfs.core.online_stores.online_response</span> <span class="kn">import</span> <span class="n">OnlineResponse</span>
+<span class="kn">from</span> <span class="nn">kfs.core.provider</span> <span class="kn">import</span> <span class="n">Provider</span><span class="p">,</span> <span class="n">get_provider</span>
+<span class="kn">from</span> <span class="nn">kfs.entities.entity</span> <span class="kn">import</span> <span class="n">Entity</span>
+<span class="kn">from</span> <span class="nn">kfs.entities.feature_view</span> <span class="kn">import</span> <span class="n">FeatureView</span>
+<span class="kn">from</span> <span class="nn">kfs.errors</span> <span class="kn">import</span> <span class="n">EntityNotFoundException</span><span class="p">,</span> <span class="n">FeatureViewNotFoundException</span>
+<span class="kn">from</span> <span class="nn">kfs.registry</span> <span class="kn">import</span> <span class="n">Registry</span>
+<span class="kn">from</span> <span class="nn">kfs.repo_config</span> <span class="kn">import</span> <span class="n">RepoConfig</span><span class="p">,</span> <span class="n">load_repo_config</span>
+<span class="kn">from</span> <span class="nn">kfs</span> <span class="kn">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">kfs.version</span> <span class="kn">import</span> <span class="n">get_version</span>
+
+
+<div class="viewcode-block" id="FeatureStore"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore">[docs]</a><span class="k">class</span> <span class="nc">FeatureStore</span><span class="p">:</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A FeatureStore object is used to define, create, and retrieve features.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        repo_path (optional): Path to a `feature_store.yaml` used to configure the</span>
+<span class="sd">            feature store.</span>
+
+<span class="sd">        provider (optional): Configuration object used to configure the feature store.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span>
+    <span class="n">repo_path</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">_registry</span><span class="p">:</span> <span class="n">Registry</span>
+
+    <span class="n">HUDI_FORMAT</span> <span class="o">=</span> <span class="s2">&quot;hudi&quot;</span>
+    <span class="n">HIVE_FORMAT</span> <span class="o">=</span> <span class="s2">&quot;hive&quot;</span>
+    <span class="n">SPARK_FORMAT</span> <span class="o">=</span> <span class="s2">&quot;spark&quot;</span>
+    <span class="n">DELTA_FORMAT</span> <span class="o">=</span> <span class="s2">&quot;delta&quot;</span>
+
+    <span class="n">MERGE</span> <span class="o">=</span> <span class="s2">&quot;merge&quot;</span>
+    <span class="n">APPEND</span> <span class="o">=</span> <span class="s2">&quot;append&quot;</span>
+    <span class="n">OVERWRITE</span> <span class="o">=</span> <span class="s2">&quot;overwrite&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">project_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">user_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a FeatureStore object.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If both or neither of repo_path and config are specified.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;/kfs_private/&#39;</span><span class="p">)</span>
+        <span class="n">credentials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_local_config</span><span class="p">(</span>
+            <span class="n">project_name</span><span class="o">=</span><span class="n">project_name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">user_name</span><span class="o">=</span><span class="n">user_name</span><span class="p">,</span>
+            <span class="n">repo_path</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">load_repo_config</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span>
+
+        <span class="n">registry_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_registry_config</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span> <span class="o">=</span> <span class="n">Registry</span><span class="p">(</span><span class="n">registry_config</span><span class="p">,</span> <span class="n">repo_path</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_provider</span> <span class="o">=</span> <span class="n">get_provider</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="o">.</span><span class="n">_initialize_registry</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Gets the project of this feature store.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">project</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">provider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Gets the provider of this feature store.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">provider</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">registry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Registry</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Gets the registry of this feature store.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span>
+
+    <span class="k">def</span> <span class="nf">_get_provider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Provider</span><span class="p">:</span>
+        <span class="c1"># TODO: Bake self.repo_path into self.config so that we dont only have one interface to paths</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_provider</span>
+
+<div class="viewcode-block" id="FeatureStore.list_entities"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore.list_entities">[docs]</a>    <span class="k">def</span> <span class="nf">list_entities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieves the list of entities from the registry.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A list of entities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">list_entities</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">project</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="FeatureStore.list_feature_views"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore.list_feature_views">[docs]</a>    <span class="k">def</span> <span class="nf">list_feature_views</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieves the list of entities from the registry.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A list of entities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">list_feature_views</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">project</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="FeatureStore.get_registry_info"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore.get_registry_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_registry_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">user_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieves the list of entities from the registry.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A list of entities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">project_name</span> <span class="ow">or</span> <span class="n">user_name</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">get_registry_info</span><span class="p">(</span>
+                <span class="n">project_name</span><span class="p">,</span>
+                <span class="n">user_name</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;get_registry_info() missing 1 required positional argument: &#39;project_name&#39; or &#39;user_name&#39;&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FeatureStore.write_table"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore.write_table">[docs]</a>    <span class="k">def</span> <span class="nf">write_table</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">objects</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
+            <span class="n">Entity</span><span class="p">,</span>
+            <span class="n">FeatureView</span><span class="p">,</span>
+            <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">FeatureView</span><span class="p">,</span> <span class="n">Entity</span><span class="p">]],</span>
+        <span class="p">],</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Writes feature table to an offline store&quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">colorama</span> <span class="kn">import</span> <span class="n">Fore</span><span class="p">,</span> <span class="n">Style</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">objects</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">):</span>
+            <span class="n">objects</span> <span class="o">=</span> <span class="p">[</span><span class="n">objects</span><span class="p">]</span>
+
+        <span class="n">entities_to_update</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ob</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ob</span><span class="p">,</span> <span class="n">Entity</span><span class="p">),</span> <span class="n">objects</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ob</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ob</span><span class="p">,</span> <span class="n">FeatureView</span><span class="p">),</span> <span class="n">objects</span><span class="p">))</span>
+
+        <span class="n">_validate_feature_views</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">entities_to_update</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">objects</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Unknown object type provided as part of write table.&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">entities_to_update</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Registered entity </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">entity</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Registered feature view </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">view</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="n">view</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Deploying infrastructure for </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">name</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># lets take feature view as a single for now, later for multi fv we can add for loop to register all fvs.</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">batch_source</span><span class="p">)</span> <span class="o">==</span> <span class="n">DataFrameSource</span>
+        <span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">batch_source</span><span class="o">.</span><span class="n">data_df</span>
+
+        <span class="n">features_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_provider</span><span class="p">()</span><span class="o">.</span><span class="n">write_offline_features_data</span><span class="p">(</span>
+            <span class="n">project</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">tables_to_keep</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">,</span>
+            <span class="n">entities_to_keep</span><span class="o">=</span><span class="n">entities_to_update</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_provider</span><span class="p">()</span><span class="o">.</span><span class="n">update_infra</span><span class="p">(</span>
+            <span class="n">project</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="p">,</span>
+            <span class="n">tables_to_keep</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">,</span>
+            <span class="n">entities_to_keep</span><span class="o">=</span><span class="n">entities_to_update</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">fv</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span><span class="p">:</span>
+            <span class="n">view</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+            <span class="n">view</span><span class="p">[</span><span class="s1">&#39;features&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">features_list</span>
+            <span class="n">fv</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FeatureView</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">view</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">view</span><span class="p">,</span> <span class="n">ent</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">fv</span><span class="p">,</span> <span class="n">entities_to_update</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">apply_feature_view</span><span class="p">(</span><span class="n">view</span><span class="p">,</span> <span class="n">ent</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FeatureStore.get_historical_features"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore.get_historical_features">[docs]</a>    <span class="k">def</span> <span class="nf">get_historical_features</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">entity_df</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+        <span class="n">feature_view</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">features</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RetrievalJob</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Enrich an entity dataframe with historical feature values for either training or batch scoring.</span>
+
+<span class="sd">        This method joins historical feature data from one or more feature views to an entity dataframe by using a time</span>
+<span class="sd">        travel join.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            entity_df (Union[pd.DataFrame, str]): An entity dataframe is a collection of rows containing all entity</span>
+<span class="sd">                columns (e.g., customer_id, driver_id) on which features need to be joined, as well as a event_timestamp</span>
+<span class="sd">                column used to ensure point-in-time correctness. Either a Pandas DataFrame can be provided or a string</span>
+<span class="sd">                SQL query. The query must be of a format supported by the configured offline store (e.g., BigQuery)</span>
+<span class="sd">            features: A list of features, that should be retrieved from the offline store.</span>
+<span class="sd">                Either a list of string feature references can be provided or a FeatureService object.</span>
+<span class="sd">                Feature references are of the format &quot;feature_view:feature&quot;, e.g., &quot;customer_fv:daily_transactions&quot;.</span>
+<span class="sd">            full_feature_names: A boolean that provides the option to add the feature view prefixes to the feature names,</span>
+<span class="sd">                changing them from the format &quot;feature&quot; to &quot;feature_view__feature&quot; (e.g., &quot;daily_transactions&quot; changes to</span>
+<span class="sd">                &quot;customer_fv__daily_transactions&quot;). By default, this value is set to False.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            RetrievalJob which can be used to materialize the results.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: Both or neither of features and feature_refs are specified.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">feature_views</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span>
+
+        <span class="k">for</span> <span class="n">fv</span> <span class="ow">in</span> <span class="n">feature_views</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">fv</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">feature_view</span><span class="p">:</span>
+                <span class="n">feature_ids</span> <span class="o">=</span> <span class="n">_feature_id</span><span class="p">(</span><span class="n">feature_view</span><span class="p">,</span> <span class="n">features</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">FeatureViewNotFoundException</span><span class="p">(</span><span class="n">feature_view</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_provider</span><span class="p">()</span><span class="o">.</span><span class="n">get_historical_features</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">feature_views</span><span class="p">,</span>
+            <span class="n">feature_ids</span><span class="p">,</span>
+            <span class="n">entity_df</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="FeatureStore.version"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore.version">[docs]</a>    <span class="k">def</span> <span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Returns the version of the current KFS SDK/CLI.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_version</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FeatureStore.publish_table"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore.publish_table">[docs]</a>    <span class="k">def</span> <span class="nf">publish_table</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">start_ts</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+        <span class="n">end_ts</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes/Materialize data from the offline store into the online store.</span>
+
+<span class="sd">        This method loads feature data in the specified interval from either</span>
+<span class="sd">        the specified feature views, or all feature views if none are specified,</span>
+<span class="sd">        into the online store where it is available for online serving.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            start_date (datetime): Start date for time range of data to materialize into the online store</span>
+<span class="sd">            end_date (datetime): End date for time range of data to materialize into the online store</span>
+<span class="sd">            feature_views (List[str]): Optional list of feature view names. If selected, will only run materialization for the specified feature views.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            Materialize all features into the online store over the interval</span>
+<span class="sd">            from 3 hours ago to 10 minutes ago.</span>
+
+<span class="sd">            &gt;&gt;&gt; from kfs import FeatureStore, RepoConfig</span>
+<span class="sd">            &gt;&gt;&gt; from datetime import datetime, timedelta</span>
+<span class="sd">            &gt;&gt;&gt; fs = FeatureStore(repo_path=&quot;feature_repo&quot;)</span>
+<span class="sd">            &gt;&gt;&gt; fs.materialize(</span>
+<span class="sd">            ...     start_date=datetime.utcnow() - timedelta(hours=3), end_date=datetime.utcnow() - timedelta(minutes=10)</span>
+<span class="sd">            ... )</span>
+<span class="sd">            Materializing...</span>
+<span class="sd">            &lt;BLANKLINE&gt;</span>
+<span class="sd">            ...</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">make_tzaware</span><span class="p">(</span><span class="n">start_ts</span><span class="p">)</span>
+        <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">make_tzaware</span><span class="p">(</span><span class="n">end_ts</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">start_date</span> <span class="o">&gt;</span> <span class="n">end_date</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The given start_date </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> is greater than the given end_date </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">feature_views_to_materialize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span>
+
+        <span class="n">_print_materialization_log</span><span class="p">(</span>
+            <span class="n">start_date</span><span class="p">,</span>
+            <span class="n">end_date</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">feature_views_to_materialize</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">online_store</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_provider</span><span class="p">()</span>
+
+        <span class="c1"># TODO paging large loads</span>
+        <span class="k">for</span> <span class="n">feature_view</span> <span class="ow">in</span> <span class="n">feature_views_to_materialize</span><span class="p">:</span>
+
+            <span class="n">provider</span><span class="o">.</span><span class="n">materialize_single_feature_view</span><span class="p">(</span>
+                <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+                <span class="n">feature_view</span><span class="o">=</span><span class="n">feature_view</span><span class="p">,</span>
+                <span class="n">start_date</span><span class="o">=</span><span class="n">start_date</span><span class="p">,</span>
+                <span class="n">end_date</span><span class="o">=</span><span class="n">end_date</span><span class="p">,</span>
+                <span class="n">registry</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span>
+                <span class="n">project</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="FeatureStore.get_online_features"><a class="viewcode-back" href="../../kfs.html#kfs.feature_store.FeatureStore.get_online_features">[docs]</a>    <span class="k">def</span> <span class="nf">get_online_features</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">feature_view</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">features</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">entity_rows</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OnlineResponse</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieves the latest online feature data.</span>
+
+<span class="sd">        Note: This method will download the full feature registry the first time it is run. If you are using a</span>
+<span class="sd">        remote registry like GCS or S3 then that may take a few seconds. The registry remains cached up to a TTL</span>
+<span class="sd">        duration (which can be set to infinity). If the cached registry is stale (more time than the TTL has</span>
+<span class="sd">        passed), then a new registry will be downloaded synchronously by this method. This download may</span>
+<span class="sd">        introduce latency to online feature retrieval. In order to avoid synchronous downloads, please call</span>
+<span class="sd">        refresh_registry() prior to the TTL being reached. Remember it is possible to set the cache TTL to</span>
+<span class="sd">        infinity (cache forever).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            features: List of feature references that will be returned for each entity.\</span>
+<span class="sd">                Each feature reference should have the following format:\</span>
+<span class="sd">                &quot;feature_table:feature&quot; where &quot;feature_table&quot; &amp; &quot;feature&quot; refer to\</span>
+<span class="sd">                the feature table and feature names respectively.\</span>
+<span class="sd">            entity_rows: A list of dictionaries where each key-value is an entity-name, entity-value pair.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            OnlineResponse containing the feature data in records.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception: No entity with the specified name exists.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            Materialize all features into the online store over the interval</span>
+<span class="sd">            from 3 hours ago to 10 minutes ago, and then retrieve these online features.</span>
+
+<span class="sd">            &gt;&gt;&gt; from kfs import FeatureStore</span>
+<span class="sd">            &gt;&gt;&gt; fs = FeatureStore(repo_path=&quot;feature_repo&quot;)</span>
+<span class="sd">            &gt;&gt;&gt; online_response = fs.get_online_features(</span>
+<span class="sd">            ...     features=[</span>
+<span class="sd">            ...         &quot;driver_hourly_stats:conv_rate&quot;,</span>
+<span class="sd">            ...         &quot;driver_hourly_stats:acc_rate&quot;,</span>
+<span class="sd">            ...         &quot;driver_hourly_stats:avg_daily_trips&quot;,</span>
+<span class="sd">            ...     ],</span>
+<span class="sd">            ...     entity_rows=[{&quot;driver_id&quot;: 1001}, {&quot;driver_id&quot;: 1002}, {&quot;driver_id&quot;: 1003}, {&quot;driver_id&quot;: 1004}],</span>
+<span class="sd">            ... )</span>
+<span class="sd">            &gt;&gt;&gt; online_response_dict = online_response.to_dict()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_feature_refs</span> <span class="o">=</span> <span class="n">_feature_id</span><span class="p">(</span><span class="n">feature_view</span><span class="p">,</span> <span class="n">features</span><span class="p">)</span>
+        <span class="n">all_feature_views</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span>
+
+        <span class="n">_validate_feature_refs</span><span class="p">(</span><span class="n">_feature_refs</span><span class="p">)</span>
+        <span class="n">grouped_refs</span> <span class="o">=</span> <span class="n">_group_feature_refs</span><span class="p">(</span>
+            <span class="n">_feature_refs</span><span class="p">,</span> <span class="n">all_feature_views</span>
+        <span class="p">)</span>
+
+        <span class="n">provider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_provider</span><span class="p">()</span>
+        <span class="n">entity_name_to_join_key_map</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">entities</span><span class="p">:</span> <span class="n">entities</span> <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">views_to_update</span> <span class="k">for</span> <span class="n">entities</span> <span class="ow">in</span> <span class="n">view</span><span class="o">.</span><span class="n">entities</span>
+        <span class="p">}</span>
+
+        <span class="n">join_key_rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">entity_rows</span><span class="p">:</span>
+            <span class="n">join_key_row</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">entity_name</span><span class="p">,</span> <span class="n">entity_value</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">join_key</span> <span class="o">=</span> <span class="n">entity_name_to_join_key_map</span><span class="p">[</span><span class="n">entity_name</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">EntityNotFoundException</span><span class="p">(</span>
+                        <span class="n">entity_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+                <span class="n">join_key_row</span><span class="p">[</span><span class="n">join_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">entity_value</span>
+            <span class="k">if</span> <span class="n">join_key_row</span><span class="p">:</span>
+                <span class="c1"># May be empty if this entity row was request data</span>
+                <span class="n">join_key_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">join_key_row</span><span class="p">)</span>
+
+        <span class="n">requested_feature</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">table</span><span class="p">,</span> <span class="n">requested_features</span> <span class="ow">in</span> <span class="n">grouped_refs</span><span class="p">:</span>
+            <span class="n">requested_feature</span> <span class="o">=</span> <span class="n">requested_features</span>
+            <span class="n">result_rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_populate_result_rows_from_feature_view</span><span class="p">(</span>
+                <span class="n">entity_keys</span><span class="o">=</span><span class="n">join_key_rows</span><span class="p">,</span>
+                <span class="n">provider</span><span class="o">=</span><span class="n">provider</span><span class="p">,</span>
+                <span class="n">requested_features</span><span class="o">=</span><span class="n">requested_features</span><span class="p">,</span>
+                <span class="n">table</span><span class="o">=</span><span class="n">table</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">entity_name_to_join_key_map</span><span class="p">:</span>
+            <span class="n">requested_feature</span> <span class="o">=</span> <span class="n">requested_feature</span> <span class="o">+</span> <span class="p">[</span><span class="n">entity</span><span class="p">]</span>
+
+        <span class="c1"># issue with multiple feature views/feature table data</span>
+
+        <span class="k">return</span> <span class="n">OnlineResponse</span><span class="p">(</span>
+            <span class="n">online_response</span><span class="o">=</span><span class="n">result_rows</span><span class="p">,</span>
+            <span class="n">requested_features</span><span class="o">=</span><span class="n">requested_feature</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_populate_result_rows_from_feature_view</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">entity_keys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+        <span class="n">provider</span><span class="p">:</span> <span class="n">Provider</span><span class="p">,</span>
+        <span class="n">requested_features</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">table</span><span class="p">:</span> <span class="n">FeatureView</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]]:</span>
+        <span class="n">result_rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">read_rows</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">online_read</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">table</span><span class="o">=</span><span class="n">table</span><span class="p">,</span>
+            <span class="n">entity_keys</span><span class="o">=</span><span class="n">entity_keys</span><span class="p">,</span>
+            <span class="n">requested_features</span><span class="o">=</span><span class="n">requested_features</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># Each row is a set of features for a given entity key</span>
+        <span class="k">for</span> <span class="n">read_row</span><span class="p">,</span> <span class="n">entity_key</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">read_rows</span><span class="p">,</span> <span class="n">entity_keys</span><span class="p">):</span>
+            <span class="n">row_ts</span><span class="p">,</span> <span class="n">feature_data</span> <span class="o">=</span> <span class="n">read_row</span>
+
+            <span class="k">if</span> <span class="n">feature_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;No data found related to given features and entities id.&quot;</span><span class="p">)</span>
+            <span class="n">result_rows</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">row_ts</span><span class="p">,</span> <span class="n">feature_data</span><span class="p">,</span> <span class="n">entity_key</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">result_rows</span>
+
+    <span class="k">def</span> <span class="nf">__encode_py</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">message_bytes</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">)</span>
+        <span class="n">base64_bytes</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">message_bytes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">base64_bytes</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__decode_py</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">base64_bytes</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">)</span>
+        <span class="n">message_bytes</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">base64_bytes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">message_bytes</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__get_local_config</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">project_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">user_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">repo_path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;user_name&quot;</span><span class="p">:</span> <span class="n">user_name</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;project&quot;</span><span class="p">:</span> <span class="n">project_name</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;registry&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;postgres&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;db_name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__decode_py</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;DB_NAME&#39;</span><span class="p">)),</span>
+                <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__decode_py</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;HOST&#39;</span><span class="p">)),</span>
+                <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="mi">5432</span><span class="p">,</span>
+                <span class="s2">&quot;user&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__decode_py</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;USER&#39;</span><span class="p">)),</span>
+                <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__decode_py</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;POSTGRES_PASSWORD&quot;</span><span class="p">)),</span>
+                <span class="s2">&quot;db_schema&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__decode_py</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;DB_SCHEMA&quot;</span><span class="p">)),</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="n">repo_path</span><span class="p">,</span>
+            <span class="s2">&quot;offline_store&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;data/offline_store.parquet&quot;</span><span class="p">},</span>
+            <span class="s2">&quot;online_store&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;redis&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;connection_string&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">__decode_py</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;REDIS_HOST&#39;</span><span class="p">))</span><span class="si">}</span><span class="s2">:6379:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">__decode_py</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;REDIS_PASSWORD&#39;</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">},</span>
+        <span class="p">}</span></div>
+
+
+<span class="k">def</span> <span class="nf">_print_materialization_log</span><span class="p">(</span>
+    <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">num_feature_views</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">online_store</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">):</span>
+    <span class="k">if</span> <span class="n">start_date</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Materializing </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">num_feature_views</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2"> feature views&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; from </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">start_date</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; to </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">end_date</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; into the </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">online_store</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2"> online store.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Materializing </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">num_feature_views</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2"> feature views&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; to </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">end_date</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; into the </span><span class="si">{</span><span class="n">Style</span><span class="o">.</span><span class="n">BRIGHT</span> <span class="o">+</span> <span class="n">Fore</span><span class="o">.</span><span class="n">GREEN</span><span class="si">}{</span><span class="n">online_store</span><span class="si">}{</span><span class="n">Style</span><span class="o">.</span><span class="n">RESET_ALL</span><span class="si">}</span><span class="s2"> online store.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_validate_feature_views</span><span class="p">(</span><span class="n">feature_views</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FeatureView</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot; Verify feature views have case-insensitively unique names&quot;&quot;&quot;</span>
+    <span class="n">fv_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">fv</span> <span class="ow">in</span> <span class="n">feature_views</span><span class="p">:</span>
+        <span class="n">case_insensitive_fv_name</span> <span class="o">=</span> <span class="n">fv</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">case_insensitive_fv_name</span> <span class="ow">in</span> <span class="n">fv_names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;More than one feature view with name </span><span class="si">{</span><span class="n">case_insensitive_fv_name</span><span class="si">}</span><span class="s2"> found. Please ensure that all feature view names are case-insensitively unique. It may be necessary to ignore certain files in your feature repository by using a .kfsignore file.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fv_names</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">case_insensitive_fv_name</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_validate_feature_refs</span><span class="p">(</span><span class="n">feature_refs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+
+    <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">ref</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;:&quot;</span> <span class="ow">in</span> <span class="n">ref</span> <span class="k">else</span> <span class="n">ref</span> <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">feature_refs</span>
+    <span class="p">]</span>
+    <span class="n">collided_feature_names</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">ref</span>
+        <span class="k">for</span> <span class="n">ref</span><span class="p">,</span> <span class="n">occurrences</span> <span class="ow">in</span> <span class="n">Counter</span><span class="p">(</span><span class="n">feature_names</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">occurrences</span> <span class="o">&gt;</span> <span class="mi">1</span>
+    <span class="p">]</span>
+    <span class="c1"># need to add message for feature names crashes...</span>
+
+
+<span class="k">def</span> <span class="nf">_group_feature_refs</span><span class="p">(</span>
+    <span class="n">features</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">all_feature_views</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FeatureView</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">FeatureView</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span>
+    <span class="sd">&quot;&quot;&quot; Get list of feature views and corresponding feature names based on feature references&quot;&quot;&quot;</span>
+
+    <span class="c1"># view name to view feature view</span>
+    <span class="n">view_index</span> <span class="o">=</span> <span class="p">{</span><span class="n">view</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">view</span> <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="n">all_feature_views</span><span class="p">}</span>
+
+    <span class="c1"># view name to feature names</span>
+    <span class="n">views_features</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">features</span><span class="p">:</span>
+        <span class="n">view_name</span><span class="p">,</span> <span class="n">feat_name</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">view_name</span> <span class="ow">in</span> <span class="n">view_index</span><span class="p">:</span>
+            <span class="n">views_features</span><span class="p">[</span><span class="n">view_name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feat_name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">FeatureViewNotFoundException</span><span class="p">(</span><span class="n">view_name</span><span class="p">)</span>
+
+    <span class="n">fvs_result</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">FeatureView</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">view_name</span><span class="p">,</span> <span class="n">feature_names</span> <span class="ow">in</span> <span class="n">views_features</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">fvs_result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">view_index</span><span class="p">[</span><span class="n">view_name</span><span class="p">],</span> <span class="n">feature_names</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">fvs_result</span>
+
+
+<span class="k">def</span> <span class="nf">_feature_id</span><span class="p">(</span><span class="n">feature_views</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">all_features</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    It will create a feature_view:feature pair for all the features and feature views.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">feature_views</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">feature_view_name</span> <span class="o">=</span> <span class="n">feature_views</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">feature</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">feature_view_name</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">feature</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">all_features</span><span class="p">)</span>
+        <span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

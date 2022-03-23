@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.core.offline_stores.file_source &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.core.offline_stores.file_source</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span> <span class="nn">pyarrow._fs</span> <span class="kn">import</span> <span class="n">FileSystem</span>
+<span class="kn">from</span> <span class="nn">pyarrow.parquet</span> <span class="kn">import</span> <span class="n">ParquetFile</span>
+
+<span class="kn">from</span> <span class="nn">kfs</span> <span class="kn">import</span> <span class="n">type_map</span>
+<span class="kn">from</span> <span class="nn">kfs.data_format</span> <span class="kn">import</span> <span class="n">FileFormat</span>
+<span class="kn">from</span> <span class="nn">kfs.data_source</span> <span class="kn">import</span> <span class="n">DataSource</span><span class="p">,</span> <span class="n">SourceType</span>
+<span class="kn">from</span> <span class="nn">kfs.repo_config</span> <span class="kn">import</span> <span class="n">RepoConfig</span>
+<span class="kn">from</span> <span class="nn">kfs.value_type</span> <span class="kn">import</span> <span class="n">ValueType</span>
+
+
+<div class="viewcode-block" id="FileSource"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileSource">[docs]</a><span class="k">class</span> <span class="nc">FileSource</span><span class="p">(</span><span class="n">DataSource</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">file_format</span><span class="p">:</span> <span class="n">FileFormat</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">event_timestamp_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">created_timestamp_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a FileSource from a file containing feature data. Only Parquet format supported.</span>
+
+<span class="sd">        Args:</span>
+
+<span class="sd">            path: File path to file containing feature data. Must contain an event_timestamp column, entity columns and</span>
+<span class="sd">                feature columns.</span>
+<span class="sd">            event_timestamp_column: Event timestamp column used for point in time joins of feature values.</span>
+<span class="sd">            created_timestamp_column (optional): Timestamp column when row was created, used for deduplicating rows.</span>
+<span class="sd">            file_url: [Deprecated] Please see path</span>
+<span class="sd">            file_format (optional): Explicitly set the file format. Allows kfs to bypass inferring the file format.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            &gt;&gt;&gt; from kfs import FileSource</span>
+<span class="sd">            &gt;&gt;&gt; file_source = FileSource(path=&quot;my_features.parquet&quot;, event_timestamp_column=&quot;event_timestamp&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;No &quot;path&quot; argument provided. Please set &quot;path&quot; to the location of your file source.&#39;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_options</span> <span class="o">=</span> <span class="n">FileOptions</span><span class="p">(</span>
+            <span class="n">file_format</span><span class="o">=</span><span class="n">file_format</span><span class="p">,</span>
+            <span class="n">file_url</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">event_timestamp_column</span><span class="p">,</span>
+            <span class="n">created_timestamp_column</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FileSource</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;Comparisons should only involve FileSource class objects.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">file_options</span><span class="o">.</span><span class="n">file_url</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">file_options</span><span class="o">.</span><span class="n">file_url</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_options</span><span class="o">.</span><span class="n">file_format</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">file_options</span><span class="o">.</span><span class="n">file_format</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_timestamp_column</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">event_timestamp_column</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_timestamp_column</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">created_timestamp_column</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">file_options</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the file options of this data source</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_options</span>
+
+    <span class="nd">@file_options</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">file_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_options</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the file options of this data source</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_options</span> <span class="o">=</span> <span class="n">file_options</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">path</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the file path of this feature data source</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_options</span><span class="o">.</span><span class="n">file_url</span>
+
+<div class="viewcode-block" id="FileSource.from_dict"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileSource.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data_source</span><span class="p">:</span> <span class="n">Dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">FileSource</span><span class="p">(</span>
+            <span class="n">path</span><span class="o">=</span><span class="n">data_source</span><span class="p">[</span><span class="s2">&quot;file_options&quot;</span><span class="p">][</span><span class="s2">&quot;file_url&quot;</span><span class="p">],</span>
+            <span class="n">file_format</span><span class="o">=</span><span class="n">data_source</span><span class="p">[</span><span class="s2">&quot;file_options&quot;</span><span class="p">][</span><span class="s2">&quot;file_format&quot;</span><span class="p">],</span>
+            <span class="n">event_timestamp_column</span><span class="o">=</span><span class="n">data_source</span><span class="p">[</span><span class="s2">&quot;event_timestamp_column&quot;</span><span class="p">],</span>
+            <span class="n">created_timestamp_column</span><span class="o">=</span><span class="n">data_source</span><span class="p">[</span><span class="s2">&quot;created_timestamp_column&quot;</span><span class="p">],</span>
+        <span class="p">)</span></div>
+
+    <span class="c1"># issue with types</span>
+<div class="viewcode-block" id="FileSource.to_dict"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileSource.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">SourceType</span><span class="o">.</span><span class="n">BATCH_FILE</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;file_options&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_options</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span>
+            <span class="s2">&quot;event_timestamp_column&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_timestamp_column</span><span class="p">,</span>
+            <span class="s2">&quot;created_timestamp_column&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_timestamp_column</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="FileSource.validate"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileSource.validate">[docs]</a>    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">):</span>
+        <span class="c1"># TODO: validate a FileSource</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="FileSource.source_datatype_to_kfs_value_type"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileSource.source_datatype_to_kfs_value_type">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">source_datatype_to_kfs_value_type</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">ValueType</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">type_map</span><span class="o">.</span><span class="n">pa_to_kfs_value_type</span></div>
+
+<div class="viewcode-block" id="FileSource.get_table_column_names_and_types"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileSource.get_table_column_names_and_types">[docs]</a>    <span class="k">def</span> <span class="nf">get_table_column_names_and_types</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+        <span class="n">filesystem</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">FileSource</span><span class="o">.</span><span class="n">create_filesystem_and_path</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span>
+        <span class="p">)</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span>
+            <span class="n">path</span> <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open_input_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">schema_arrow</span>
+        <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="p">,</span> <span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">schema</span><span class="o">.</span><span class="n">types</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="FileSource.create_filesystem_and_path"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileSource.create_filesystem_and_path">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">create_filesystem_and_path</span><span class="p">(</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">FileSystem</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">path</span></div></div>
+
+
+<div class="viewcode-block" id="FileOptions"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileOptions">[docs]</a><span class="k">class</span> <span class="nc">FileOptions</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    DataSource File options used to source features from a file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">file_format</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">FileFormat</span><span class="p">],</span>
+        <span class="n">file_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        FileOptions initialization method</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_format (FileFormat, optional): file source format eg. parquet</span>
+<span class="sd">            file_url (str, optional): file source url or local file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_format</span> <span class="o">=</span> <span class="n">file_format</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_url</span> <span class="o">=</span> <span class="n">file_url</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">file_format</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the file format of this file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_format</span>
+
+    <span class="nd">@file_format</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">file_format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_format</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the file format of this file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_format</span> <span class="o">=</span> <span class="n">file_format</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">file_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the file url of this file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_url</span>
+
+    <span class="nd">@file_url</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">file_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_url</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the file url of this file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_url</span> <span class="o">=</span> <span class="n">file_url</span>
+
+<div class="viewcode-block" id="FileOptions.from_dict"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileOptions.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">file_options_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a FileOptions from a Dictionary representation of a file option</span>
+
+<span class="sd">        args:</span>
+<span class="sd">            file_options_dict: a Dictionary representation of a datasource</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Returns a FileOptions object based on the file_options Dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">file_format</span><span class="o">=</span><span class="n">file_options_dict</span><span class="p">[</span><span class="s2">&quot;file_format&quot;</span><span class="p">],</span>
+            <span class="n">file_url</span><span class="o">=</span><span class="n">file_options_dict</span><span class="p">[</span><span class="s2">&quot;file_url&quot;</span><span class="p">],</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="FileOptions.to_dict"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_source.FileOptions.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Converts an FileOptions Details to its Dictionary representation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            FileOptions Dictionary format</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;file_format&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_format</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;file_url&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_url</span><span class="p">,</span>
+        <span class="p">}</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

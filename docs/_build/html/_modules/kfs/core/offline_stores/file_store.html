@@ -1,0 +1,562 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.core.offline_stores.file_store &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.core.offline_stores.file_store</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">pydantic.typing</span> <span class="kn">import</span> <span class="n">Literal</span>
+<span class="kn">from</span> <span class="nn">pydantic.types</span> <span class="kn">import</span> <span class="n">StrictStr</span>
+
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="nn">pytz</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">pyarrow</span>
+<span class="kn">import</span> <span class="nn">pyspark</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.dataframe_source</span> <span class="kn">import</span> <span class="n">DataFrameSource</span>
+
+<span class="kn">from</span> <span class="nn">kfs.entities.entity</span> <span class="kn">import</span> <span class="n">Entity</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.offline_store</span> <span class="kn">import</span> <span class="n">OfflineStore</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.file_source</span> <span class="kn">import</span> <span class="n">FileSource</span>
+<span class="kn">from</span> <span class="nn">kfs.entities.feature_table</span> <span class="kn">import</span> <span class="n">FeatureTable</span>
+<span class="kn">from</span> <span class="nn">kfs.errors</span> <span class="kn">import</span> <span class="n">KfsJoinKeysDuringMaterialization</span>
+<span class="kn">from</span> <span class="nn">kfs.entities.feature_view</span> <span class="kn">import</span> <span class="n">FeatureView</span> <span class="c1">#, DUMMY_ENTITY_ID, DUMMY_ENTITY_VAL, </span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.offline_store</span> <span class="kn">import</span> <span class="n">OfflineStore</span><span class="p">,</span> <span class="n">RetrievalJob</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.offline_utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">kfs.core.provider</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_get_requested_feature_views_to_features_dict</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">kfs.registry</span> <span class="kn">import</span> <span class="n">Registry</span>
+<span class="kn">from</span> <span class="nn">kfs.repo_config</span> <span class="kn">import</span> <span class="n">KfsConfigBaseModel</span><span class="p">,</span> <span class="n">RepoConfig</span>
+
+
+<div class="viewcode-block" id="FileOfflineStoreConfig"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_store.FileOfflineStoreConfig">[docs]</a><span class="k">class</span> <span class="nc">FileOfflineStoreConfig</span><span class="p">(</span><span class="n">KfsConfigBaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Offline store config for local (file-based) store &quot;&quot;&quot;</span>
+
+    <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;file&quot;</span>
+    <span class="sd">&quot;&quot;&quot; Offline store type selector&quot;&quot;&quot;</span>
+
+    <span class="n">path</span><span class="p">:</span> <span class="n">StrictStr</span> <span class="o">=</span> <span class="s2">&quot;data/offline_store.parquet&quot;</span>
+    <span class="sd">&quot;&quot;&quot; (optional) Path to Offline store file &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="FileRetrievalJob"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_store.FileRetrievalJob">[docs]</a><span class="k">class</span> <span class="nc">FileRetrievalJob</span><span class="p">(</span><span class="n">RetrievalJob</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">evaluation_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a lazy historical retrieval job&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">evaluation_function</span> <span class="o">=</span> <span class="n">evaluation_function</span>
+
+    <span class="k">def</span> <span class="nf">_to_df_internal</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="c1"># Only execute the evaluation function to build the final historical retrieval dataframe at the last moment.</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluation_function</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_to_arrow_internal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Only execute the evaluation function to build the final historical retrieval dataframe at the last moment.</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluation_function</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">df</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FileOfflineStore"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_store.FileOfflineStore">[docs]</a><span class="k">class</span> <span class="nc">FileOfflineStore</span><span class="p">(</span><span class="n">OfflineStore</span><span class="p">):</span>
+<div class="viewcode-block" id="FileOfflineStore.get_historical_features"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_store.FileOfflineStore.get_historical_features">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_historical_features</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">,</span>
+        <span class="n">feature_views</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FeatureView</span><span class="p">],</span>
+        <span class="n">feature_refs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">entity_df</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+        <span class="n">registry</span><span class="p">:</span> <span class="n">Registry</span><span class="p">,</span>
+        <span class="n">project</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="c1"># full_feature_names: bool = False,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RetrievalJob</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entity_df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Please provide an entity_df of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span><span class="si">}</span><span class="s2"> instead of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">entity_df</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        
+        <span class="n">entity_df_event_timestamp_col</span> <span class="o">=</span> <span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span>  <span class="c1"># local modifiable copy of global variable</span>
+        <span class="k">if</span> <span class="n">entity_df_event_timestamp_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entity_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">datetime_columns</span> <span class="o">=</span> <span class="n">entity_df</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span>
+                <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">,</span> <span class="s2">&quot;datetimetz&quot;</span><span class="p">]</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">columns</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datetime_columns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Using </span><span class="si">{</span><span class="n">datetime_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> as the event timestamp. To specify a column explicitly, please name it </span><span class="si">{</span><span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+                <span class="n">entity_df_event_timestamp_col</span> <span class="o">=</span> <span class="n">datetime_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Please provide an entity_df with a column named </span><span class="si">{</span><span class="n">DEFAULT_ENTITY_DF_EVENT_TIMESTAMP_COL</span><span class="si">}</span><span class="s2"> representing the time of events.&quot;</span>
+                <span class="p">)</span>
+
+        <span class="n">feature_views_to_features</span> <span class="o">=</span> <span class="n">_get_requested_feature_views_to_features_dict</span><span class="p">(</span>
+            <span class="n">feature_refs</span><span class="p">,</span>
+            <span class="n">feature_views</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Create lazy function that is only called from the RetrievalJob object</span>
+        <span class="k">def</span> <span class="nf">evaluate_historical_retrieval</span><span class="p">():</span>
+
+            <span class="c1"># Make sure all event timestamp fields are tz-aware. We default tz-naive fields to UTC</span>
+            <span class="n">entity_df</span><span class="p">[</span><span class="n">entity_df_event_timestamp_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">entity_df</span><span class="p">[</span>
+                <span class="n">entity_df_event_timestamp_col</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">x</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="n">pytz</span><span class="o">.</span><span class="n">utc</span><span class="p">))</span>
+
+            <span class="c1"># Create a copy of entity_df to prevent modifying the original</span>
+            <span class="n">entity_df_with_features</span> <span class="o">=</span> <span class="n">entity_df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+            <span class="c1"># Convert event timestamp column to datetime and normalize time zone to UTC</span>
+            <span class="c1"># This is necessary to avoid issues with pd.merge_asof</span>
+            <span class="n">entity_df_with_features</span><span class="p">[</span><span class="n">entity_df_event_timestamp_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+                <span class="n">entity_df_with_features</span><span class="p">[</span><span class="n">entity_df_event_timestamp_col</span><span class="p">],</span> <span class="n">utc</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Sort event timestamp values</span>
+            <span class="n">entity_df_with_features</span> <span class="o">=</span> <span class="n">entity_df_with_features</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span>
+                <span class="n">entity_df_event_timestamp_col</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Load feature view data from sources and join them incrementally</span>
+            <span class="k">for</span> <span class="n">feature_view</span><span class="p">,</span> <span class="n">features</span> <span class="ow">in</span> <span class="n">feature_views_to_features</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+                <span class="c1"># Read offline store parquet data in pyarrow/spark format.</span>
+                <span class="c1"># this function has no use</span>
+                
+                <span class="n">path</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">repo_path</span> <span class="o">/</span> <span class="n">config</span><span class="o">.</span><span class="n">offline_store</span><span class="o">.</span><span class="n">path</span>
+                <span class="n">table</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">parquet</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="c1">#, filesystem=filesystem)</span>
+
+                <span class="n">event_timestamp_column</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">feature_view</span><span class="o">.</span><span class="n">batch_source</span><span class="o">.</span><span class="n">event_timestamp_column</span>
+                <span class="p">)</span>
+                <span class="n">created_timestamp_column</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">feature_view</span><span class="o">.</span><span class="n">batch_source</span><span class="o">.</span><span class="n">created_timestamp_column</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Rename columns by the field mapping dictionary if it exists</span>
+                <span class="c1"># if feature_view.batch_source.field_mapping is not None:</span>
+                <span class="c1">#     table = _run_field_mapping(</span>
+                <span class="c1">#         table, feature_view.batch_source.field_mapping</span>
+                <span class="c1">#     )</span>
+
+                <span class="c1"># Convert pyarrow table to pandas dataframe. Note, if the underlying data has missing values,</span>
+                <span class="c1"># pandas will convert those values to np.nan if the dtypes are numerical (floats, ints, etc.) or boolean</span>
+                <span class="c1"># If the dtype is &#39;object&#39;, then missing values are inferred as python `None`s.</span>
+                <span class="c1"># More details at:</span>
+                <span class="c1"># https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#values-considered-missing</span>
+                <span class="n">df_to_join</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+
+                <span class="c1"># Make sure all timestamp fields are tz-aware. We default tz-naive fields to UTC</span>
+
+                <span class="c1"># deal with timezone + data types (if pandas read timestamps as objects)</span>
+                <span class="n">df_to_join</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df_to_join</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">])</span>
+
+                <span class="n">df_to_join</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_to_join</span><span class="p">[</span>
+                    <span class="n">event_timestamp_column</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                    <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">x</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="n">pytz</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">created_timestamp_column</span><span class="p">:</span>
+                    <span class="n">df_to_join</span><span class="p">[</span><span class="n">created_timestamp_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df_to_join</span><span class="p">[</span><span class="n">created_timestamp_column</span><span class="p">])</span>
+
+                    <span class="n">df_to_join</span><span class="p">[</span><span class="n">created_timestamp_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_to_join</span><span class="p">[</span>
+                        <span class="n">created_timestamp_column</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                        <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span>
+                        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                        <span class="k">else</span> <span class="n">x</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="n">pytz</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
+                    <span class="p">)</span>
+
+                <span class="c1"># Sort dataframe by the event timestamp column</span>
+                <span class="n">df_to_join</span> <span class="o">=</span> <span class="n">df_to_join</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">event_timestamp_column</span><span class="p">)</span>
+
+                <span class="c1"># Build a list of all the features we should select from this source</span>
+                <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">features</span><span class="p">:</span>
+                    <span class="c1"># Modify the separator for feature refs in column names to double underscore. We are using</span>
+                    <span class="c1"># double underscore as separator for consistency with other databases like BigQuery,</span>
+                    <span class="c1"># where there are very few characters available for use as separators</span>
+                    <span class="c1"># if full_feature_names:</span>
+                    <span class="c1">#     formatted_feature_name = f&quot;{feature_view.name}__{feature}&quot;</span>
+                    <span class="c1"># else:</span>
+                    <span class="n">formatted_feature_name</span> <span class="o">=</span> <span class="n">feature</span>
+                    <span class="c1"># Add the feature name to the list of columns</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">formatted_feature_name</span><span class="p">)</span>
+
+                    <span class="c1"># Ensure that the source dataframe feature column includes the feature view name as a prefix</span>
+                    <span class="n">df_to_join</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+                        <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">formatted_feature_name</span><span class="p">:</span> <span class="n">formatted_feature_name</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                <span class="c1"># Build a list of entity columns to join on (from the right table)</span>
+                <span class="c1"># join_keys = [entity_name for entity_name in feature_view.entities] # entity = registry.get_entity(entity_name, project)</span>
+                <span class="n">join_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">feature_view</span><span class="o">.</span><span class="n">entities</span><span class="p">)</span> <span class="c1"># entity = registry.get_entity(entity_name, project)</span>
+
+                <span class="n">right_entity_columns</span> <span class="o">=</span> <span class="n">join_keys</span>
+                <span class="n">right_entity_key_columns</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">event_timestamp_column</span>
+                <span class="p">]</span> <span class="o">+</span> <span class="n">right_entity_columns</span>
+                
+                <span class="c1"># Remove all duplicate entity keys (using created timestamp)</span>
+                <span class="n">right_entity_key_sort_columns</span> <span class="o">=</span> <span class="n">right_entity_key_columns</span>
+                <span class="k">if</span> <span class="n">created_timestamp_column</span><span class="p">:</span>
+                    <span class="c1"># If created_timestamp is available, use it to dedupe deterministically</span>
+                    <span class="n">right_entity_key_sort_columns</span> <span class="o">=</span> <span class="n">right_entity_key_sort_columns</span> <span class="o">+</span> <span class="p">[</span>
+                        <span class="n">created_timestamp_column</span>
+                    <span class="p">]</span>
+
+                <span class="n">df_to_join</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="n">right_entity_key_sort_columns</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">df_to_join</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span>
+                    <span class="n">right_entity_key_sort_columns</span><span class="p">,</span>
+                    <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;last&quot;</span><span class="p">,</span>
+                    <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Select only the columns we need to join from the feature dataframe</span>
+                <span class="n">df_to_join</span> <span class="o">=</span> <span class="n">df_to_join</span><span class="p">[</span><span class="n">right_entity_key_columns</span> <span class="o">+</span> <span class="n">feature_names</span><span class="p">]</span>
+
+                <span class="c1"># Do point in-time-join between entity_df and feature dataframe</span>
+                <span class="n">entity_df_with_features</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge_asof</span><span class="p">(</span>
+                    <span class="n">entity_df_with_features</span><span class="p">,</span>
+                    <span class="n">df_to_join</span><span class="p">,</span>
+                    <span class="n">left_on</span><span class="o">=</span><span class="n">entity_df_event_timestamp_col</span><span class="p">,</span>
+                    <span class="n">right_on</span><span class="o">=</span><span class="n">event_timestamp_column</span><span class="p">,</span>
+                    <span class="n">by</span><span class="o">=</span><span class="n">right_entity_columns</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="c1"># tolerance=feature_view.ttl,</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Remove right (feature table/view) event_timestamp column.</span>
+                <span class="k">if</span> <span class="n">event_timestamp_column</span> <span class="o">!=</span> <span class="n">entity_df_event_timestamp_col</span><span class="p">:</span>
+                    <span class="n">entity_df_with_features</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+                        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+                    <span class="p">)</span>
+
+                <span class="c1"># Ensure that we delete dataframes to free up memory</span>
+                <span class="k">del</span> <span class="n">df_to_join</span>
+
+            <span class="c1"># Move &quot;event_timestamp&quot; column to front</span>
+            <span class="n">current_cols</span> <span class="o">=</span> <span class="n">entity_df_with_features</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">current_cols</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">entity_df_event_timestamp_col</span><span class="p">)</span>
+            <span class="n">entity_df_with_features</span> <span class="o">=</span> <span class="n">entity_df_with_features</span><span class="p">[</span>
+                <span class="p">[</span><span class="n">entity_df_event_timestamp_col</span><span class="p">]</span> <span class="o">+</span> <span class="n">current_cols</span>
+            <span class="p">]</span>
+
+            <span class="k">return</span> <span class="n">entity_df_with_features</span>
+
+        <span class="n">job</span> <span class="o">=</span> <span class="n">FileRetrievalJob</span><span class="p">(</span>
+            <span class="n">evaluation_function</span><span class="o">=</span><span class="n">evaluate_historical_retrieval</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">job</span></div>
+
+<div class="viewcode-block" id="FileOfflineStore.pull_latest_from_table_or_query"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_store.FileOfflineStore.pull_latest_from_table_or_query">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pull_latest_from_table_or_query</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">,</span>
+        <span class="n">data_source</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="c1"># DataSource</span>
+        <span class="n">join_key_columns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">feature_name_columns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">event_timestamp_column</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">created_timestamp_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+        <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RetrievalJob</span><span class="p">:</span>
+        <span class="c1"># assert isinstance(data_source, FileSource)</span>
+
+        <span class="c1"># Create lazy function that is only called from the RetrievalJob object</span>
+        <span class="k">def</span> <span class="nf">evaluate_offline_job</span><span class="p">():</span>
+
+            <span class="n">path</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">repo_path</span> <span class="o">/</span> <span class="n">config</span><span class="o">.</span><span class="n">offline_store</span><span class="o">.</span><span class="n">path</span>
+
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">data_source</span><span class="p">)</span> <span class="o">==</span> <span class="n">DataFrameSource</span><span class="p">:</span>
+                <span class="n">offline_data_df</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">parquet</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="n">offline_data_df</span> <span class="o">=</span> <span class="n">offline_data_df</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+            <span class="c1"># move to spark/pyarrow if required or provide as option for users requirement</span>
+            <span class="k">elif</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;parquet&quot;</span><span class="p">:</span>
+                <span class="n">offline_data_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="c1">#, filesystem=filesystem)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">offline_data_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            
+            <span class="c1"># Make sure all timestamp fields are tz-aware. We default tz-naive fields to UTC</span>
+            <span class="n">offline_data_df</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">offline_data_df</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">])</span>
+            <span class="n">offline_data_df</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">offline_data_df</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">x</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="n">pytz</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">created_timestamp_column</span><span class="p">:</span>
+                <span class="n">offline_data_df</span><span class="p">[</span><span class="n">created_timestamp_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">offline_data_df</span><span class="p">[</span><span class="n">created_timestamp_column</span><span class="p">])</span>
+                <span class="n">offline_data_df</span><span class="p">[</span><span class="n">created_timestamp_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">offline_data_df</span><span class="p">[</span>
+                    <span class="n">created_timestamp_column</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                    <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">x</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="n">pytz</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="n">offline_data_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">offline_data_df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">join_key_columns</span><span class="p">)</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">offline_data_columns</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">KfsJoinKeysDuringMaterialization</span><span class="p">(</span>
+                    <span class="n">data_source</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="nb">set</span><span class="p">(</span><span class="n">join_key_columns</span><span class="p">),</span> <span class="n">offline_data_columns</span>
+                <span class="p">)</span>
+
+            <span class="n">ts_columns</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">,</span> <span class="n">created_timestamp_column</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">created_timestamp_column</span>
+                <span class="k">else</span> <span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span>
+            <span class="p">)</span>
+
+            <span class="n">offline_data_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="n">ts_columns</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">offline_data_df</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">offline_data_df</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">start_date</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">offline_data_df</span><span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">end_date</span><span class="p">)</span>
+            <span class="p">]</span>
+
+            <span class="n">columns_to_extract</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+                <span class="n">join_key_columns</span> <span class="o">+</span> <span class="n">feature_name_columns</span> <span class="o">+</span> <span class="n">ts_columns</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">join_key_columns</span><span class="p">:</span>
+                <span class="n">last_values_df</span> <span class="o">=</span> <span class="n">filtered_df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span>
+                    <span class="n">join_key_columns</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;last&quot;</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">last_values_df</span> <span class="o">=</span> <span class="n">filtered_df</span>
+                <span class="c1"># last_values_df[DUMMY_ENTITY_ID] = DUMMY_ENTITY_VAL</span>
+                <span class="c1"># columns_to_extract.add(DUMMY_ENTITY_ID)</span>
+
+            <span class="k">return</span> <span class="n">last_values_df</span><span class="p">[</span><span class="n">columns_to_extract</span><span class="p">]</span>
+
+        <span class="c1"># When materializing a single feature view, we don&#39;t need full feature names. On demand transforms aren&#39;t materialized</span>
+        <span class="k">return</span> <span class="n">FileRetrievalJob</span><span class="p">(</span>
+            <span class="n">evaluation_function</span><span class="o">=</span><span class="n">evaluate_offline_job</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="FileOfflineStore.write_offline_features"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.file_store.FileOfflineStore.write_offline_features">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">write_offline_features</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pyspark</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]],</span>
+        <span class="c1"># entity_df: Union[pd.DataFrame, pyspark.sql.DataFrame, str],</span>
+        <span class="n">tables_to_keep</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">FeatureTable</span><span class="p">,</span> <span class="n">FeatureView</span><span class="p">]],</span>
+        <span class="n">entities_to_keep</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Entity</span><span class="p">],</span>
+        <span class="c1"># feature_views: List[FeatureView],</span>
+        <span class="c1"># registry: Registry,</span>
+        <span class="c1"># format: Optional[str] = &quot;parquet&quot;,</span>
+        <span class="c1"># mode: Optional[str] = &quot;append&quot;,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            config: RepoConfig</span>
+<span class="sd">            data: dataframe or file_name or file_path Union[pd.DataFrame, pyspark.sql.DataFrame, str]</span>
+<span class="sd">            entity_df: Union[pd.DataFrame, str]</span>
+<span class="sd">            file_path: default or specify Optional[str] = config.offline_store_path or config.repo_path</span>
+<span class="sd">            feature_view: feature, primary_key, feature_view_name List[FeatureView]</span>
+<span class="sd">            registry: Registry</span>
+<span class="sd">            format: delta, parquet(default), Hive, Hudi Optional[str] = &#39;parquet&#39;</span>
+<span class="sd">            project: str</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># # SparkSession</span>
+        <span class="c1"># _spark_session = SparkSession.builder.getOrCreate()</span>
+        <span class="c1"># _spark_context = _spark_session.sparkContext</span>
+        <span class="c1"># _jvm = _spark_context._jvm</span>
+
+        <span class="c1"># _spark_session.conf.set(&quot;hive.exec.dynamic.partition&quot;, &quot;true&quot;)</span>
+        <span class="c1"># _spark_session.conf.set(&quot;hive.exec.dynamic.partition.mode&quot;, &quot;nonstrict&quot;)</span>
+        <span class="c1"># _spark_session.conf.set(&quot;spark.sql.hive.convertMetastoreParquet&quot;, &quot;false&quot;)</span>
+
+        <span class="n">offline_store_file_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">repo_path</span> <span class="o">/</span> <span class="n">config</span><span class="o">.</span><span class="n">offline_store</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">offline_store_file_path</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="n">tables_to_keep</span><span class="p">:</span>
+            <span class="n">view</span><span class="o">.</span><span class="n">is_valid</span><span class="p">()</span>
+            <span class="n">feature_view_dict</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+            <span class="c1"># cols = [feature for feature in feature_view_dict[&quot;feature&quot;]] + [entities for entities in feature_view_dict[&quot;entities&quot;]]</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;feature&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;entities&quot;</span><span class="p">])</span>
+
+        <span class="n">cols</span> <span class="o">+=</span> <span class="p">[</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;event_timestamp_column&quot;</span><span class="p">]]</span>
+        <span class="k">if</span> <span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;created_timestamp_column&quot;</span><span class="p">]:</span>
+            <span class="n">cols</span> <span class="o">+=</span> <span class="p">[</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;created_timestamp_column&quot;</span><span class="p">]]</span>
+
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+
+            <span class="n">data_url</span> <span class="o">=</span> <span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;file_options&quot;</span><span class="p">][</span><span class="s2">&quot;file_url&quot;</span><span class="p">]</span>
+
+            <span class="c1"># read with spark</span>
+            <span class="c1"># spark_df = _spark_session.read.parquet(data)</span>
+            
+            <span class="c1"># read with pandas</span>
+            <span class="k">if</span> <span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s1">&#39;file_options&#39;</span><span class="p">][</span><span class="s1">&#39;file_format&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;csv&#39;</span><span class="p">:</span>
+                <span class="n">pandas_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_url</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;c&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s1">&#39;file_options&#39;</span><span class="p">][</span><span class="s1">&#39;file_format&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;parquet&#39;</span><span class="p">:</span>
+                <span class="n">pandas_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">data_url</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;pyarrow&quot;</span><span class="p">)</span>
+
+            <span class="n">pandas_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">pandas_df</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">cols</span><span class="p">)</span>
+
+
+            <span class="c1"># choose given features</span>
+            <span class="c1"># for feature_view in feature_views:</span>
+            <span class="c1">#     cols = [feature.name for features in feature_view[&quot;feature&quot;] for feature in features]</span>
+
+            <span class="c1"># spark_df.select([col for col in spark_df.columns if col in cols])</span>
+
+            <span class="c1"># write</span>
+            <span class="k">if</span> <span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;file_options&quot;</span><span class="p">][</span><span class="s2">&quot;file_format&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;parquet&quot;</span> <span class="ow">or</span> <span class="s2">&quot;csv&quot;</span><span class="p">:</span>
+                <span class="c1"># spark_df.write.parquet(&quot;demo_store.parquet&quot;)</span>
+                <span class="c1"># _spark_session.stop()</span>
+                <span class="n">pandas_df</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">offline_store_file_path</span><span class="p">,</span> <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;pyarrow&quot;</span><span class="p">)</span>
+
+                <span class="c1"># collecting feature names and dtypes of given features</span>
+                <span class="n">feature_columns</span> <span class="o">=</span> <span class="n">pandas_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">feature_dtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">pandas_df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">]</span>
+            
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Provided format: </span><span class="si">{</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s1">&#39;batch_source&#39;</span><span class="p">][</span><span class="s1">&#39;file_options&#39;</span><span class="p">][</span><span class="s1">&#39;file_format&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> is currently not supported.&quot;</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">offline_store_file_path</span><span class="p">,</span> <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;pyarrow&quot;</span><span class="p">)</span>
+                
+                <span class="c1"># collecting feature names and dtypes of given features</span>
+                <span class="n">feature_columns</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">feature_dtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">dtypes</span><span class="p">]</span>
+
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pyspark</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                <span class="n">mode</span> <span class="o">=</span> <span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;df_options&quot;</span><span class="p">][</span><span class="s2">&quot;mode&quot;</span><span class="p">]</span>
+
+                <span class="c1"># for example (experimental)</span>
+                <span class="c1"># data.to_pandas()</span>
+
+                <span class="n">data</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;parquet&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">offline_store_file_path</span><span class="p">)</span>
+
+                <span class="c1"># collecting feature names and dtypes of given features</span>
+                <span class="n">feature_columns</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span>
+                <span class="n">feature_dtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">dtype</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">dtypes</span><span class="p">]</span>
+
+
+        <span class="c1"># if feature_view_dict[&quot;batch_source&quot;][&quot;file_options&quot;][&quot;file_format&quot;] == &quot;csv&quot;:</span>
+        <span class="c1">#     # spark_df.write.parquet(&quot;demo_store.parquet&quot;)</span>
+        <span class="c1">#     # _spark_session.stop()</span>
+        <span class="c1">#     pandas_df.to_csv(file_path) </span>
+
+        
+
+
+        <span class="c1"># if format:</span>
+        <span class="c1">#     return ParquetFormat()</span>
+
+        <span class="c1"># if format:</span>
+        <span class="c1">#     return CSVFormat()</span>
+
+        <span class="c1"># # pandas dataframe</span>
+        <span class="c1"># if isinstance(data, pd.DataFrame):</span>
+        <span class="c1">#     pass</span>
+        
+        <span class="c1"># # spark dataframe</span>
+        <span class="c1"># elif isinstance(data, pyspark.sql.DataFrame):</span>
+        <span class="c1">#     pass</span>
+        
+        <span class="c1"># # csv file</span>
+        <span class="c1"># elif isinstance(data.rsplit(&#39;.&#39;, 1)[-1], &#39;csv&#39;):</span>
+        <span class="c1">#     pass</span>
+        
+        <span class="c1"># # parquet file</span>
+        <span class="c1"># elif isinstance(data.rsplit(&#39;.&#39;, 1)[-1], &#39;parquet&#39;):</span>
+        <span class="c1">#     pass</span>
+        
+        <span class="k">return</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span> <span class="s1">&#39;value_type&#39;</span><span class="p">:</span> <span class="n">feature_dtypes</span><span class="p">[</span><span class="n">i</span><span class="p">]}</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">feature_columns</span><span class="p">)]</span></div></div>
+        
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

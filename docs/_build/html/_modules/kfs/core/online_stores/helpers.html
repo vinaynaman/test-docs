@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.core.online_stores.helpers &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.core.online_stores.helpers</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">importlib</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">import</span> <span class="nn">mmh3</span>
+
+<span class="kn">from</span> <span class="nn">kfs</span> <span class="kn">import</span> <span class="n">errors</span>
+<span class="kn">from</span> <span class="nn">kfs.core.online_stores.online_store</span> <span class="kn">import</span> <span class="n">OnlineStore</span>
+
+
+<div class="viewcode-block" id="get_online_store_from_config"><a class="viewcode-back" href="../../../../kfs.core.online_stores.html#kfs.core.online_stores.helpers.get_online_store_from_config">[docs]</a><span class="k">def</span> <span class="nf">get_online_store_from_config</span><span class="p">(</span><span class="n">online_store_config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,)</span> <span class="o">-&gt;</span> <span class="n">OnlineStore</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Get the offline store from offline store config&quot;&quot;&quot;</span>
+
+    <span class="n">module_name</span> <span class="o">=</span> <span class="n">online_store_config</span><span class="o">.</span><span class="vm">__module__</span>
+    <span class="n">qualified_name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">online_store_config</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="n">store_class_name</span> <span class="o">=</span> <span class="n">qualified_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;Config&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module_name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># The original exception can be anything - either module not found,</span>
+        <span class="c1"># or any other kind of error happening during the module import time.</span>
+        <span class="c1"># So we should include the original error as well in the stack trace.</span>
+        <span class="k">raise</span> <span class="n">errors</span><span class="o">.</span><span class="n">KfsModuleImportError</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="s2">&quot;OnlineStore&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+
+    <span class="c1"># Try getting the provider class definition</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">online_store_class</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">store_class_name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="c1"># This can only be one type of error, when class_name attribute does not exist in the module</span>
+        <span class="c1"># So we don&#39;t have to include the original exception here</span>
+        <span class="k">raise</span> <span class="n">errors</span><span class="o">.</span><span class="n">KfsClassImportError</span><span class="p">(</span>
+            <span class="n">module_name</span><span class="p">,</span> <span class="n">store_class_name</span><span class="p">,</span> <span class="n">class_type</span><span class="o">=</span><span class="s2">&quot;OnlineStore&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">online_store_class</span><span class="p">()</span></div>
+
+
+<span class="c1"># def _redis_key(project: str, entity_key: Any) -&gt; bytes:</span>
+<span class="c1">#     key: List[bytes] = [serialize_entity_key(entity_key), project.encode(&quot;utf-8&quot;)]</span>
+<span class="c1">#     return b&quot;&quot;.join(key)</span>
+
+
+<span class="k">def</span> <span class="nf">_mmh3</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate murmur3_32 hash which is equal to scala version which is using little endian:</span>
+<span class="sd">        https://stackoverflow.com/questions/29932956/murmur3-hash-different-result-between-python-and-java-implementation</span>
+<span class="sd">        https://stackoverflow.com/questions/13141787/convert-decimal-int-to-little-endian-string-x-x</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">key_hash</span> <span class="o">=</span> <span class="n">mmh3</span><span class="o">.</span><span class="n">hash</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&lt;Q&quot;</span><span class="p">,</span> <span class="n">key_hash</span><span class="p">)</span><span class="o">.</span><span class="n">hex</span><span class="p">()[:</span><span class="mi">8</span><span class="p">])</span>
+
+
+<span class="c1"># def compute_entity_id(entity_key: Any) -&gt; str:</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     Compute Entity id given Feast Entity Key for online stores.</span>
+<span class="c1">#     Remember that Entity here refers to `EntityKey Dictionary` which is used in some online stores to encode the keys.</span>
+<span class="c1">#     It has nothing to do with the Entity concept we have in Feast.</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     return mmh3.hash_bytes(serialize_entity_key(entity_key)).hex()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

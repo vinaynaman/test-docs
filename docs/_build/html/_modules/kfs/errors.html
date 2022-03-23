@@ -1,0 +1,194 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.errors &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.errors</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Set</span>
+<span class="kn">from</span> <span class="nn">colorama</span> <span class="kn">import</span> <span class="n">Fore</span><span class="p">,</span> <span class="n">Style</span>
+
+
+<div class="viewcode-block" id="UnsupportedFileFormat"><a class="viewcode-back" href="../../kfs.html#kfs.errors.UnsupportedFileFormat">[docs]</a><span class="k">class</span> <span class="nc">UnsupportedFileFormat</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_format</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Provided file format </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_format</span><span class="si">}</span><span class="s2"> is not supported.&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">KfsClassImportError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module_name</span><span class="p">,</span> <span class="n">class_name</span><span class="p">,</span> <span class="n">class_type</span><span class="o">=</span><span class="s2">&quot;provider&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Could not import </span><span class="si">{</span><span class="n">class_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2">&#39; from module &#39;</span><span class="si">{</span><span class="n">module_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="TtlTypeError"><a class="viewcode-back" href="../../kfs.html#kfs.errors.TtlTypeError">[docs]</a><span class="k">class</span> <span class="nc">TtlTypeError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">type</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2"> is not supported. Please provide in Number of Days.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KfsModuleImportError"><a class="viewcode-back" href="../../kfs.html#kfs.errors.KfsModuleImportError">[docs]</a><span class="k">class</span> <span class="nc">KfsModuleImportError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">module_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not import </span><span class="si">{</span><span class="n">module_type</span><span class="si">}</span><span class="s2"> module &#39;</span><span class="si">{</span><span class="n">module_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KfsClassImportError"><a class="viewcode-back" href="../../kfs.html#kfs.errors.KfsClassImportError">[docs]</a><span class="k">class</span> <span class="nc">KfsClassImportError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module_name</span><span class="p">,</span> <span class="n">class_name</span><span class="p">,</span> <span class="n">class_type</span><span class="o">=</span><span class="s2">&quot;provider&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Could not import </span><span class="si">{</span><span class="n">class_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2">&#39; from module &#39;</span><span class="si">{</span><span class="n">module_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KfsClassInvalidName"><a class="viewcode-back" href="../../kfs.html#kfs.errors.KfsClassInvalidName">[docs]</a><span class="k">class</span> <span class="nc">KfsClassInvalidName</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">class_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Config Class &#39;</span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2">&#39; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;should end with the string `</span><span class="si">{</span><span class="n">class_type</span><span class="si">}</span><span class="s2">`.&#39;&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KfsProviderNotImplementedError"><a class="viewcode-back" href="../../kfs.html#kfs.errors.KfsProviderNotImplementedError">[docs]</a><span class="k">class</span> <span class="nc">KfsProviderNotImplementedError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">provider_name</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Provider &#39;</span><span class="si">{</span><span class="n">provider_name</span><span class="si">}</span><span class="s2">&#39; is not implemented&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KfsEntityDFMissingColumnsError"><a class="viewcode-back" href="../../kfs.html#kfs.errors.KfsEntityDFMissingColumnsError">[docs]</a><span class="k">class</span> <span class="nc">KfsEntityDFMissingColumnsError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">missing</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;The entity dataframe you have provided must contain columns </span><span class="si">{</span><span class="n">expected</span><span class="si">}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;but </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2"> were missing.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KfsJoinKeysDuringMaterialization"><a class="viewcode-back" href="../../kfs.html#kfs.errors.KfsJoinKeysDuringMaterialization">[docs]</a><span class="k">class</span> <span class="nc">KfsJoinKeysDuringMaterialization</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">join_key_columns</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">source_columns</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;The DataFrame from </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> being materialized must have at least </span><span class="si">{</span><span class="n">join_key_columns</span><span class="si">}</span><span class="s2"> columns present, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;but these were missing: </span><span class="si">{</span><span class="n">join_key_columns</span> <span class="o">-</span> <span class="n">source_columns</span><span class="si">}</span><span class="s2"> &quot;</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">KfsObjectNotFoundException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="FeatureViewNotFoundException"><a class="viewcode-back" href="../../kfs.html#kfs.errors.FeatureViewNotFoundException">[docs]</a><span class="k">class</span> <span class="nc">FeatureViewNotFoundException</span><span class="p">(</span><span class="n">KfsObjectNotFoundException</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">project</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">project</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Feature view </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> does not exist in project </span><span class="si">{</span><span class="n">project</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Feature view </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> does not exist&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="KfsObjectNotFoundException"><a class="viewcode-back" href="../../kfs.html#kfs.errors.KfsObjectNotFoundException">[docs]</a><span class="k">class</span> <span class="nc">KfsObjectNotFoundException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="EntityNotFoundException"><a class="viewcode-back" href="../../kfs.html#kfs.errors.EntityNotFoundException">[docs]</a><span class="k">class</span> <span class="nc">EntityNotFoundException</span><span class="p">(</span><span class="n">KfsObjectNotFoundException</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">project</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">project</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Entity </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> does not exist in project </span><span class="si">{</span><span class="n">project</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Entity </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> does not exist&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EntityTimestampInferenceException"><a class="viewcode-back" href="../../kfs.html#kfs.errors.EntityTimestampInferenceException">[docs]</a><span class="k">class</span> <span class="nc">EntityTimestampInferenceException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expected_column_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Please provide an entity_df with a column named </span><span class="si">{</span><span class="n">expected_column_name</span><span class="si">}</span><span class="s2"> representing the time of events.&quot;</span>
+        <span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

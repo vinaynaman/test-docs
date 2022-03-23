@@ -1,0 +1,386 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>kfs.core.online_stores package &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="kfs.core.registry package" href="kfs.core.registry.html" />
+    <link rel="prev" title="kfs.core.offline_stores package" href="kfs.core.offline_stores.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="kfs-core-online-stores-package">
+<h1>kfs.core.online_stores package<a class="headerlink" href="#kfs-core-online-stores-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-kfs.core.online_stores.helpers">
+<span id="kfs-core-online-stores-helpers-module"></span><h2>kfs.core.online_stores.helpers module<a class="headerlink" href="#module-kfs.core.online_stores.helpers" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="kfs.core.online_stores.helpers.get_online_store_from_config">
+<span class="sig-prename descclassname"><span class="pre">kfs.core.online_stores.helpers.</span></span><span class="sig-name descname"><span class="pre">get_online_store_from_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">online_store_config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kfs.core.online_stores.online_store.OnlineStore" title="kfs.core.online_stores.online_store.OnlineStore"><span class="pre">kfs.core.online_stores.online_store.OnlineStore</span></a></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/helpers.html#get_online_store_from_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.helpers.get_online_store_from_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the offline store from offline store config</p>
+</dd></dl>
+
+</section>
+<section id="module-kfs.core.online_stores.online_response">
+<span id="kfs-core-online-stores-online-response-module"></span><h2>kfs.core.online_stores.online_response module<a class="headerlink" href="#module-kfs.core.online_stores.online_response" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.online_stores.online_response.OnlineResponse">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.online_stores.online_response.</span></span><span class="sig-name descname"><span class="pre">OnlineResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">online_response</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_features</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/online_response.html#OnlineResponse"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.online_response.OnlineResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Defines a online response in feast.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.online_response.OnlineResponse.to_df">
+<span class="sig-name descname"><span class="pre">to_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.core.frame.DataFrame</span></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/online_response.html#OnlineResponse.to_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.online_response.OnlineResponse.to_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts GetOnlineFeaturesResponse features into Panda dataframe form.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.online_response.OnlineResponse.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/online_response.html#OnlineResponse.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.online_response.OnlineResponse.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts GetOnlineFeaturesResponse features into a dictionary form.
+List[Tuple[Optional[datetime], Optional[Dict[str, Any]]]]</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-kfs.core.online_stores.online_store">
+<span id="kfs-core-online-stores-online-store-module"></span><h2>kfs.core.online_stores.online_store module<a class="headerlink" href="#module-kfs.core.online_stores.online_store" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.online_stores.online_store.OnlineStore">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.online_stores.online_store.</span></span><span class="sig-name descname"><span class="pre">OnlineStore</span></span><a class="reference internal" href="_modules/kfs/core/online_stores/online_store.html#OnlineStore"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.online_store.OnlineStore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>OnlineStore is an object used for all interaction between Feast and the service used for online storage of
+features.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.online_store.OnlineStore.online_read">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">online_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_keys</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_features</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.html#kfs.value_type.ValueType" title="kfs.value_type.ValueType"><span class="pre">kfs.value_type.ValueType</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/online_store.html#OnlineStore.online_read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.online_store.OnlineStore.online_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read feature values given an Entity Key. This is a low level interface, not
+expected to be used by the users directly.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>config: The RepoConfig for the current FeatureStore.
+table: Feast FeatureTable or FeatureView
+entity_keys: a list of entity keys that should be read from the FeatureStore.
+requested_features: (Optional) A subset of the features that should be read from the FeatureStore.</p>
+</dd>
+<dt>Returns:</dt><dd><p>Data is returned as a list, one item per entity key. Each item in the list is a tuple
+of event_ts for the row, and the feature data as a dict from feature names to values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.online_store.OnlineStore.online_write_batch">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">online_write_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.html#kfs.value_type.ValueType" title="kfs.value_type.ValueType"><span class="pre">kfs.value_type.ValueType</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/online_store.html#OnlineStore.online_write_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.online_store.OnlineStore.online_write_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a batch of feature rows to the online store. This is a low level interface, not
+expected to be used by the users directly.</p>
+<p>If a tz-naive timestamp is passed to this method, it should be assumed to be UTC by implementors.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>config: The RepoConfig for the current FeatureStore.
+table: Feast FeatureTable or FeatureView
+data: a list of quadruplets containing Feature data. Each quadruplet contains an Entity Key,
+a dict containing feature values, an event timestamp for the row, and
+the created timestamp for the row if it exists.
+progress: Optional function to be called once every mini-batch of rows is written to
+the online store. Can be used to display progress.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.online_store.OnlineStore.teardown">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">teardown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/online_store.html#OnlineStore.teardown"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.online_store.OnlineStore.teardown" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.online_store.OnlineStore.update">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/online_store.html#OnlineStore.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.online_store.OnlineStore.update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-kfs.core.online_stores.redis">
+<span id="kfs-core-online-stores-redis-module"></span><h2>kfs.core.online_stores.redis module<a class="headerlink" href="#module-kfs.core.online_stores.redis" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStore">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.online_stores.redis.</span></span><span class="sig-name descname"><span class="pre">RedisOnlineStore</span></span><a class="reference internal" href="_modules/kfs/core/online_stores/redis.html#RedisOnlineStore"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kfs.core.online_stores.online_store.OnlineStore" title="kfs.core.online_stores.online_store.OnlineStore"><code class="xref py py-class docutils literal notranslate"><span class="pre">kfs.core.online_stores.online_store.OnlineStore</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStore.online_read">
+<span class="sig-name descname"><span class="pre">online_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_keys</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_features</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/redis.html#RedisOnlineStore.online_read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStore.online_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read feature values given an Entity Key. This is a low level interface, not
+expected to be used by the users directly.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>config: The RepoConfig for the current FeatureStore.
+table: Feast FeatureTable or FeatureView
+entity_keys: a list of entity keys that should be read from the FeatureStore.
+requested_features: (Optional) A subset of the features that should be read from the FeatureStore.</p>
+</dd>
+<dt>Returns:</dt><dd><p>Data is returned as a list, one item per entity key. Each item in the list is a tuple
+of event_ts for the row, and the feature data as a dict from feature names to values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStore.online_write_batch">
+<span class="sig-name descname"><span class="pre">online_write_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/redis.html#RedisOnlineStore.online_write_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStore.online_write_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a batch of feature rows to the online store. This is a low level interface, not
+expected to be used by the users directly.</p>
+<p>If a tz-naive timestamp is passed to this method, it should be assumed to be UTC by implementors.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>config: The RepoConfig for the current FeatureStore.
+table: Feast FeatureTable or FeatureView
+data: a list of quadruplets containing Feature data. Each quadruplet contains an Entity Key,
+a dict containing feature values, an event timestamp for the row, and
+the created timestamp for the row if it exists.
+progress: Optional function to be called once every mini-batch of rows is written to
+the online store. Can be used to display progress.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStore.teardown">
+<span class="sig-name descname"><span class="pre">teardown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/redis.html#RedisOnlineStore.teardown"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStore.teardown" title="Permalink to this definition">¶</a></dt>
+<dd><p>There’s currently no teardown done for Redis.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStore.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/redis.html#RedisOnlineStore.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStore.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>There’s currently no setup done for Redis.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStoreConfig">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.online_stores.redis.</span></span><span class="sig-name descname"><span class="pre">RedisOnlineStoreConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">'redis'</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'redis'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">redis_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#kfs.core.online_stores.redis.RedisType" title="kfs.core.online_stores.redis.RedisType"><span class="pre">kfs.core.online_stores.redis.RedisType</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">RedisType.redis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection_string</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pydantic.types.StrictStr</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'localhost:6379'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/redis.html#RedisOnlineStoreConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStoreConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="kfs.html#kfs.repo_config.KfsConfigBaseModel" title="kfs.repo_config.KfsConfigBaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">kfs.repo_config.KfsConfigBaseModel</span></code></a></p>
+<p>Online store config for Redis store</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStoreConfig.connection_string">
+<span class="sig-name descname"><span class="pre">connection_string</span></span><em class="property"><span class="pre">:</span> <span class="pre">pydantic.types.StrictStr</span></em><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStoreConfig.connection_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connection string containing the host, port, and configuration parameters for Redis
+format: host:port,parameter1,parameter2 eg. redis:6379,db=0</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStoreConfig.redis_type">
+<span class="sig-name descname"><span class="pre">redis_type</span></span><em class="property"><span class="pre">:</span> <a class="reference internal" href="#kfs.core.online_stores.redis.RedisType" title="kfs.core.online_stores.redis.RedisType"><span class="pre">kfs.core.online_stores.redis.RedisType</span></a></em><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStoreConfig.redis_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redis type: redis or redis_cluster</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisOnlineStoreConfig.type">
+<span class="sig-name descname"><span class="pre">type</span></span><em class="property"><span class="pre">:</span> <span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">'redis'</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#kfs.core.online_stores.redis.RedisOnlineStoreConfig.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Online store type selector</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisType">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.online_stores.redis.</span></span><span class="sig-name descname"><span class="pre">RedisType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/redis.html#RedisType"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.redis.RedisType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>An enumeration.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisType.redis">
+<span class="sig-name descname"><span class="pre">redis</span></span><em class="property"> <span class="pre">=</span> <span class="pre">'redis'</span></em><a class="headerlink" href="#kfs.core.online_stores.redis.RedisType.redis" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kfs.core.online_stores.redis.RedisType.redis_cluster">
+<span class="sig-name descname"><span class="pre">redis_cluster</span></span><em class="property"> <span class="pre">=</span> <span class="pre">'redis_cluster'</span></em><a class="headerlink" href="#kfs.core.online_stores.redis.RedisType.redis_cluster" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-kfs.core.online_stores.sqlite">
+<span id="kfs-core-online-stores-sqlite-module"></span><h2>kfs.core.online_stores.sqlite module<a class="headerlink" href="#module-kfs.core.online_stores.sqlite" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.online_stores.sqlite.SqliteOnlineStore">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.online_stores.sqlite.</span></span><span class="sig-name descname"><span class="pre">SqliteOnlineStore</span></span><a class="reference internal" href="_modules/kfs/core/online_stores/sqlite.html#SqliteOnlineStore"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.sqlite.SqliteOnlineStore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kfs.core.online_stores.online_store.OnlineStore" title="kfs.core.online_stores.online_store.OnlineStore"><code class="xref py py-class docutils literal notranslate"><span class="pre">kfs.core.online_stores.online_store.OnlineStore</span></code></a></p>
+<p>OnlineStore is an object used for all interaction between Feast and the service used for offline storage of
+features.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.sqlite.SqliteOnlineStore.online_read">
+<span class="sig-name descname"><span class="pre">online_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_keys</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_features</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/sqlite.html#SqliteOnlineStore.online_read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.sqlite.SqliteOnlineStore.online_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read feature values given an Entity Key. This is a low level interface, not
+expected to be used by the users directly.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>config: The RepoConfig for the current FeatureStore.
+table: Feast FeatureTable or FeatureView
+entity_keys: a list of entity keys that should be read from the FeatureStore.
+requested_features: (Optional) A subset of the features that should be read from the FeatureStore.</p>
+</dd>
+<dt>Returns:</dt><dd><p>Data is returned as a list, one item per entity key. Each item in the list is a tuple
+of event_ts for the row, and the feature data as a dict from feature names to values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.sqlite.SqliteOnlineStore.online_write_batch">
+<span class="sig-name descname"><span class="pre">online_write_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">datetime.datetime</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kfs/core/online_stores/sqlite.html#SqliteOnlineStore.online_write_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.sqlite.SqliteOnlineStore.online_write_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a batch of feature rows to the online store. This is a low level interface, not
+expected to be used by the users directly.</p>
+<p>If a tz-naive timestamp is passed to this method, it should be assumed to be UTC by implementors.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>config: The RepoConfig for the current FeatureStore.
+table: Feast FeatureTable or FeatureView
+data: a list of quadruplets containing Feature data. Each quadruplet contains an Entity Key,
+a dict containing feature values, an event timestamp for the row, and
+the created timestamp for the row if it exists.
+progress: Optional function to be called once every mini-batch of rows is written to
+the online store. Can be used to display progress.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.sqlite.SqliteOnlineStore.teardown">
+<span class="sig-name descname"><span class="pre">teardown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/sqlite.html#SqliteOnlineStore.teardown"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.sqlite.SqliteOnlineStore.teardown" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfs.core.online_stores.sqlite.SqliteOnlineStore.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="kfs.html#kfs.repo_config.RepoConfig" title="kfs.repo_config.RepoConfig"><span class="pre">kfs.repo_config.RepoConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_table.FeatureTable" title="kfs.entities.feature_table.FeatureTable"><span class="pre">kfs.entities.feature_table.FeatureTable</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="kfs.entities.html#kfs.entities.feature_view.FeatureView" title="kfs.entities.feature_view.FeatureView"><span class="pre">kfs.entities.feature_view.FeatureView</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities_to_keep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="kfs.entities.html#kfs.entities.entity.Entity" title="kfs.entities.entity.Entity"><span class="pre">kfs.entities.entity.Entity</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/sqlite.html#SqliteOnlineStore.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.sqlite.SqliteOnlineStore.update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kfs.core.online_stores.sqlite.SqliteOnlineStoreConfig">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">kfs.core.online_stores.sqlite.</span></span><span class="sig-name descname"><span class="pre">SqliteOnlineStoreConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">'sqlite'</span><span class="p"><span class="pre">,</span> </span><span class="pre">'kfs.core.online_stores.sqlite.SqliteOnlineStore'</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'sqlite'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pydantic.types.StrictStr</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'data/online.db'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfs/core/online_stores/sqlite.html#SqliteOnlineStoreConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfs.core.online_stores.sqlite.SqliteOnlineStoreConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="kfs.html#kfs.repo_config.KfsConfigBaseModel" title="kfs.repo_config.KfsConfigBaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">kfs.repo_config.KfsConfigBaseModel</span></code></a></p>
+<p>Online store config for local (SQLite-based) store</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kfs.core.online_stores.sqlite.SqliteOnlineStoreConfig.path">
+<span class="sig-name descname"><span class="pre">path</span></span><em class="property"><span class="pre">:</span> <span class="pre">pydantic.types.StrictStr</span></em><a class="headerlink" href="#kfs.core.online_stores.sqlite.SqliteOnlineStoreConfig.path" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) Path to sqlite db</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kfs.core.online_stores.sqlite.SqliteOnlineStoreConfig.type">
+<span class="sig-name descname"><span class="pre">type</span></span><em class="property"><span class="pre">:</span> <span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">'sqlite'</span><span class="p"><span class="pre">,</span> </span><span class="pre">'kfs.core.online_stores.sqlite.SqliteOnlineStore'</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#kfs.core.online_stores.sqlite.SqliteOnlineStoreConfig.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Online store type selector</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-kfs.core.online_stores">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-kfs.core.online_stores" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">kfs</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="kfs.html">kfs package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">kfs</a><ul>
+  <li><a href="kfs.html">kfs package</a><ul>
+  <li><a href="kfs.core.html">kfs.core package</a><ul>
+      <li>Previous: <a href="kfs.core.offline_stores.html" title="previous chapter">kfs.core.offline_stores package</a></li>
+      <li>Next: <a href="kfs.core.registry.html" title="next chapter">kfs.core.registry package</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/kfs.core.online_stores.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

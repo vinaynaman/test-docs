@@ -1,0 +1,600 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kfs.core.offline_stores.postgres_store &#8212; Kfs  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfs.core.offline_stores.postgres_store</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">ContextManager</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span> <span class="nn">psycopg2</span>
+<span class="kn">import</span> <span class="nn">psycopg2.extras</span>
+<span class="kn">from</span> <span class="nn">pydantic.types</span> <span class="kn">import</span> <span class="n">StrictStr</span>
+<span class="kn">import</span> <span class="nn">contextlib</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">import</span> <span class="nn">pyspark</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
+<span class="kn">from</span> <span class="nn">psycopg2</span> <span class="kn">import</span> <span class="n">sql</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.postgres_source</span> <span class="kn">import</span> <span class="n">PostgreSQLSource</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.dataframe_source</span> <span class="kn">import</span> <span class="n">DataFrameSource</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.postgres_util</span> <span class="kn">import</span> <span class="n">PostgreSQLConfig</span><span class="p">,</span> <span class="n">get_postgres_conn</span>
+
+<span class="kn">from</span> <span class="nn">kfs.data_source</span> <span class="kn">import</span> <span class="n">DataSource</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.offline_store</span> <span class="kn">import</span> <span class="n">RetrievalJob</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.offline_store</span> <span class="kn">import</span> <span class="n">OfflineStore</span>
+<span class="kn">from</span> <span class="nn">kfs.entities.feature_table</span> <span class="kn">import</span> <span class="n">FeatureTable</span>
+<span class="kn">from</span> <span class="nn">kfs.entities.feature_view</span> <span class="kn">import</span> <span class="n">FeatureView</span>
+<span class="kn">from</span> <span class="nn">kfs.entities.entity</span> <span class="kn">import</span> <span class="n">Entity</span>
+<span class="kn">from</span> <span class="nn">kfs.registry</span> <span class="kn">import</span> <span class="n">Registry</span>
+<span class="kn">from</span> <span class="nn">kfs.repo_config</span> <span class="kn">import</span> <span class="n">RepoConfig</span>
+<span class="kn">from</span> <span class="nn">kfs.type_map</span> <span class="kn">import</span> <span class="n">arrow_to_pg_type</span><span class="p">,</span> <span class="n">pg_type_code_to_arrow</span>
+<span class="kn">from</span> <span class="nn">kfs.core.offline_stores.offline_utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">df_to_create_table_sql</span><span class="p">,</span>
+    <span class="n">build_point_in_time_query</span><span class="p">,</span>
+    <span class="n">get_expected_join_keys</span><span class="p">,</span>
+    <span class="n">get_feature_view_query_context</span><span class="p">,</span>
+    <span class="n">get_temp_entity_table_name</span><span class="p">,</span>
+    <span class="n">infer_event_timestamp_from_entity_df</span><span class="p">,</span>
+    <span class="n">assert_expected_columns_in_entity_df</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="PostgreSQLOfflineStoreConfig"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.PostgreSQLOfflineStoreConfig">[docs]</a><span class="k">class</span> <span class="nc">PostgreSQLOfflineStoreConfig</span><span class="p">(</span><span class="n">PostgreSQLConfig</span><span class="p">):</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span>
+
+    <span class="n">db_schema</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StrictStr</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="PostgreSQLOfflineStore"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.PostgreSQLOfflineStore">[docs]</a><span class="k">class</span> <span class="nc">PostgreSQLOfflineStore</span><span class="p">(</span><span class="n">OfflineStore</span><span class="p">):</span>
+    <span class="n">offline_table_name</span><span class="p">:</span> <span class="nb">str</span>
+<div class="viewcode-block" id="PostgreSQLOfflineStore.pull_latest_from_table_or_query"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.PostgreSQLOfflineStore.pull_latest_from_table_or_query">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pull_latest_from_table_or_query</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">,</span>
+        <span class="n">data_source</span><span class="p">:</span> <span class="n">DataSource</span><span class="p">,</span>
+        <span class="n">join_key_columns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">feature_name_columns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">event_timestamp_column</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">created_timestamp_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+        <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RetrievalJob</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_source</span><span class="p">,</span> <span class="p">(</span><span class="n">PostgreSQLSource</span><span class="p">,</span> <span class="n">DataFrameSource</span><span class="p">))</span>
+        <span class="n">from_expression</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SELECT * FROM </span><span class="si">{</span><span class="n">PostgreSQLOfflineStore</span><span class="o">.</span><span class="n">offline_table_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">partition_by_join_key_string</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_append_alias</span><span class="p">(</span><span class="n">join_key_columns</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">partition_by_join_key_string</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">partition_by_join_key_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;PARTITION BY </span><span class="si">{</span><span class="n">partition_by_join_key_string</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">timestamps</span> <span class="o">=</span> <span class="p">[</span><span class="n">event_timestamp_column</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">created_timestamp_column</span><span class="p">:</span>
+            <span class="n">timestamps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">created_timestamp_column</span><span class="p">)</span>
+        <span class="n">timestamp_desc_string</span> <span class="o">=</span> <span class="s2">&quot; DESC, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_append_alias</span><span class="p">(</span><span class="n">timestamps</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot; DESC&quot;</span>
+        <span class="n">a_field_string</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="n">_append_alias</span><span class="p">(</span><span class="n">join_key_columns</span> <span class="o">+</span> <span class="n">feature_name_columns</span> <span class="o">+</span> <span class="n">timestamps</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">b_field_string</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="n">_append_alias</span><span class="p">(</span><span class="n">join_key_columns</span> <span class="o">+</span> <span class="n">feature_name_columns</span> <span class="o">+</span> <span class="n">timestamps</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT</span>
+<span class="s2">                </span><span class="si">{</span><span class="n">b_field_string</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            FROM (</span>
+<span class="s2">                SELECT </span><span class="si">{</span><span class="n">a_field_string</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">                ROW_NUMBER() OVER(</span><span class="si">{</span><span class="n">partition_by_join_key_string</span><span class="si">}</span><span class="s2"> ORDER BY </span><span class="si">{</span><span class="n">timestamp_desc_string</span><span class="si">}</span><span class="s2">) AS _kfs_row</span>
+<span class="s2">                FROM (</span><span class="si">{</span><span class="n">from_expression</span><span class="si">}</span><span class="s2">) a</span>
+<span class="s2">                WHERE a.</span><span class="si">{</span><span class="n">event_timestamp_column</span><span class="si">}</span><span class="s2"> BETWEEN &#39;</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">&#39;::timestamptz AND &#39;</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&#39;::timestamptz</span>
+<span class="s2">            ) b</span>
+<span class="s2">            WHERE _kfs_row = 1</span>
+<span class="s2">            &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">PostgreSQLRetrievalJob</span><span class="p">(</span>
+            <span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">,</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">full_feature_names</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="PostgreSQLOfflineStore.get_historical_features"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.PostgreSQLOfflineStore.get_historical_features">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_historical_features</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">,</span>
+        <span class="n">feature_views</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FeatureView</span><span class="p">],</span>
+        <span class="n">feature_refs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="c1"># unnecessary feature_refs remove it</span>
+        <span class="n">entity_df</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+        <span class="n">registry</span><span class="p">:</span> <span class="n">Registry</span><span class="p">,</span>
+        <span class="n">project</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">full_feature_names</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RetrievalJob</span><span class="p">:</span>
+        <span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+        <span class="k">def</span> <span class="nf">query_generator</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+            <span class="n">table_name</span> <span class="o">=</span> <span class="n">get_temp_entity_table_name</span><span class="p">()</span>
+            <span class="n">entity_schema</span> <span class="o">=</span> <span class="n">_df_to_table</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">offline_store</span><span class="p">,</span> <span class="n">entity_df</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+
+            <span class="n">entity_df_event_timestamp_col</span> <span class="o">=</span> <span class="n">infer_event_timestamp_from_entity_df</span><span class="p">(</span>
+                <span class="n">entity_schema</span>
+            <span class="p">)</span>
+
+            <span class="n">expected_join_keys</span> <span class="o">=</span> <span class="n">get_expected_join_keys</span><span class="p">(</span>
+                <span class="n">project</span><span class="p">,</span> <span class="n">feature_views</span><span class="p">,</span> <span class="n">registry</span>
+            <span class="p">)</span>
+
+            <span class="n">assert_expected_columns_in_entity_df</span><span class="p">(</span>
+                <span class="n">entity_schema</span><span class="p">,</span> <span class="n">expected_join_keys</span><span class="p">,</span> <span class="n">entity_df_event_timestamp_col</span>
+            <span class="p">)</span>
+
+            <span class="n">query_context</span> <span class="o">=</span> <span class="n">get_feature_view_query_context</span><span class="p">(</span>
+                <span class="n">feature_refs</span><span class="p">,</span> <span class="n">feature_views</span><span class="p">,</span> <span class="n">registry</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">query</span> <span class="o">=</span> <span class="n">build_point_in_time_query</span><span class="p">(</span>
+                <span class="n">query_context</span><span class="p">,</span>
+                <span class="n">left_table_query_string</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span>
+                <span class="n">entity_df_event_timestamp_col</span><span class="o">=</span><span class="n">entity_df_event_timestamp_col</span><span class="p">,</span>
+                <span class="n">query_template</span><span class="o">=</span><span class="n">MULTIPLE_FEATURE_VIEW_POINT_IN_TIME_JOIN</span><span class="p">,</span>
+                <span class="n">full_feature_names</span><span class="o">=</span><span class="n">full_feature_names</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">query</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">get_postgres_conn</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">offline_store</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+                    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                        <span class="n">sql</span><span class="o">.</span><span class="n">SQL</span><span class="p">(</span>
+                            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                            DROP TABLE IF EXISTS {};</span>
+<span class="sd">                            &quot;&quot;&quot;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sql</span><span class="o">.</span><span class="n">Identifier</span><span class="p">(</span><span class="n">table_name</span><span class="p">)),</span>
+                    <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">PostgreSQLRetrievalJob</span><span class="p">(</span>
+            <span class="n">query</span><span class="o">=</span><span class="n">query_generator</span><span class="p">,</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">full_feature_names</span><span class="o">=</span><span class="n">full_feature_names</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="PostgreSQLOfflineStore.write_offline_features"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.PostgreSQLOfflineStore.write_offline_features">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">write_offline_features</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pyspark</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]],</span>
+        <span class="n">tables_to_keep</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">FeatureTable</span><span class="p">,</span> <span class="n">FeatureView</span><span class="p">]],</span>
+        <span class="n">entities_to_keep</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Entity</span><span class="p">],</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            config: RepoConfig</span>
+<span class="sd">            file_path: default or specify Optional[str] = config.offline_store_path or config.repo_path</span>
+<span class="sd">            data: dataframe or file_name or file_path Union[pd.DataFrame, pyspark.sql.DataFrame, str]</span>
+<span class="sd">            entity_df: Union[pd.DataFrame, str]</span>
+<span class="sd">            feature_view: feature, primary_key, feature_view_name List[FeatureView]</span>
+<span class="sd">            registry: Registry</span>
+<span class="sd">            format: delta, parquet(default), Hive, Hudi Optional[str] = &#39;parquet&#39;</span>
+<span class="sd">            project: str</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="n">tables_to_keep</span><span class="p">:</span>
+            <span class="n">view</span><span class="o">.</span><span class="n">is_valid</span><span class="p">()</span>
+            <span class="n">feature_view_dict</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;feature&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;entities&quot;</span><span class="p">])</span>
+
+        <span class="n">cols</span> <span class="o">+=</span> <span class="p">[</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;event_timestamp_column&quot;</span><span class="p">]]</span>
+        <span class="k">if</span> <span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;created_timestamp_column&quot;</span><span class="p">]:</span>
+            <span class="n">cols</span> <span class="o">+=</span> <span class="p">[</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;created_timestamp_column&quot;</span><span class="p">]]</span>
+
+        <span class="n">offline_table_name</span> <span class="o">=</span> <span class="n">PostgreSQLOfflineStore</span><span class="o">.</span><span class="n">offline_table_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">feature_view_dict</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">_offline_store&quot;</span>
+
+        <span class="c1"># read and write with psycopg2</span>
+        <span class="k">with</span> <span class="n">get_postgres_conn</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">offline_store</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">data_query</span> <span class="o">=</span> <span class="n">feature_view_dict</span><span class="p">[</span><span class="s2">&quot;batch_source&quot;</span><span class="p">][</span><span class="s2">&quot;custom_options&quot;</span><span class="p">][</span><span class="s2">&quot;configuration&quot;</span><span class="p">][</span><span class="s2">&quot;query&quot;</span><span class="p">]</span>
+
+                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                    <span class="n">sql</span><span class="o">.</span><span class="n">SQL</span><span class="p">(</span><span class="n">data_query</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="n">tuples</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                <span class="n">df_columns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">data_query</span><span class="si">}</span><span class="s2"> LIMIT 1&quot;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,)</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">tuples</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">df_columns</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pyspark</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">toPandas</span><span class="p">()</span>
+
+            <span class="c1"># filter desired/given columns</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+
+            <span class="c1"># Creating a list of tupples from the dataframe values</span>
+            <span class="n">tpls</span> <span class="o">=</span> <span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()]</span>
+
+            <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="sa">f</span><span class="s2">&quot;&quot;&quot;&quot;</span><span class="si">{</span><span class="n">col_name</span><span class="si">}</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">arrow_to_pg_type</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">col_type</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span> <span class="k">for</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_type</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE TABLE &quot;</span><span class="si">{</span><span class="n">offline_table_name</span><span class="si">}</span><span class="s2">&quot; (</span>
+<span class="s2">                    </span><span class="si">{</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">                );</span>
+<span class="s2">                &quot;&quot;&quot;</span>
+            <span class="p">)</span>
+
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+            <span class="c1"># SQL query to execute</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;INSERT INTO </span><span class="si">%s</span><span class="s2">(</span><span class="si">%s</span><span class="s2">) VALUES </span><span class="si">%%</span><span class="s2">s &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">offline_table_name</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cols</span><span class="p">))</span>
+            <span class="n">psycopg2</span><span class="o">.</span><span class="n">extras</span><span class="o">.</span><span class="n">execute_values</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">tpls</span><span class="p">)</span>
+
+            <span class="n">feature_columns</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">feature_dtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span> <span class="s1">&#39;value_type&#39;</span><span class="p">:</span> <span class="n">feature_dtypes</span><span class="p">[</span><span class="n">i</span><span class="p">]}</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">feature_columns</span><span class="p">)]</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_df_to_table</span><span class="p">(</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">PostgreSQLOfflineStoreConfig</span><span class="p">,</span> <span class="n">entity_df</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entity_df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">df_to_postgres_table</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">entity_df</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entity_df</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">sql_to_postgres_table</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">entity_df</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">entity_df</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="PostgreSQLRetrievalJob"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.PostgreSQLRetrievalJob">[docs]</a><span class="k">class</span> <span class="nc">PostgreSQLRetrievalJob</span><span class="p">(</span><span class="n">RetrievalJob</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">ContextManager</span><span class="p">[</span><span class="nb">str</span><span class="p">]]],</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RepoConfig</span><span class="p">,</span>
+        <span class="n">full_feature_names</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_query_generator</span> <span class="o">=</span> <span class="n">query</span>
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+            <span class="k">def</span> <span class="nf">query_generator</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+                <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+                <span class="k">yield</span> <span class="n">query</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_query_generator</span> <span class="o">=</span> <span class="n">query_generator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="n">get_postgres_conn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">offline_store</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_full_feature_names</span> <span class="o">=</span> <span class="n">full_feature_names</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">full_feature_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_full_feature_names</span>
+
+    <span class="k">def</span> <span class="nf">_to_df_internal</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="c1"># We use arrow format because it gives better control of the table schema</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_arrow_internal</span><span class="p">()</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+
+<div class="viewcode-block" id="PostgreSQLRetrievalJob.to_sql"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.PostgreSQLRetrievalJob.to_sql">[docs]</a>    <span class="k">def</span> <span class="nf">to_sql</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query_generator</span><span class="p">()</span> <span class="k">as</span> <span class="n">query</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">query</span></div>
+
+    <span class="k">def</span> <span class="nf">_to_arrow_internal</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query_generator</span><span class="p">()</span> <span class="k">as</span> <span class="n">query</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+            <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+            <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pg_type_code_to_arrow</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">type_code</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cur</span><span class="o">.</span><span class="n">description</span>
+            <span class="p">]</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span>
+            <span class="c1"># TODO: Fix...</span>
+            <span class="n">data_transposed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fields</span><span class="p">)):</span>
+                <span class="n">data_transposed</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)):</span>
+                    <span class="n">data_transposed</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">])</span>
+
+            <span class="c1"># table</span>
+            <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">data_transposed</span><span class="p">],</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span>
+            <span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_append_alias</span><span class="p">(</span><span class="n">field_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">alias</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">alias</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">field_name</span> <span class="ow">in</span> <span class="n">field_names</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="df_to_postgres_table"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.df_to_postgres_table">[docs]</a><span class="k">def</span> <span class="nf">df_to_postgres_table</span><span class="p">(</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">PostgreSQLOfflineStoreConfig</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a table for the data frame, insert all the values, and return the table schema</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">get_postgres_conn</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">df_to_create_table_sql</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">table_name</span><span class="p">))</span>
+        <span class="n">psycopg2</span><span class="o">.</span><span class="n">extras</span><span class="o">.</span><span class="n">execute_values</span><span class="p">(</span>
+            <span class="n">cur</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            INSERT INTO </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            VALUES %s</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="sql_to_postgres_table"><a class="viewcode-back" href="../../../../kfs.core.offline_stores.html#kfs.core.offline_stores.postgres_store.sql_to_postgres_table">[docs]</a><span class="k">def</span> <span class="nf">sql_to_postgres_table</span><span class="p">(</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">PostgreSQLOfflineStoreConfig</span><span class="p">,</span> <span class="n">sql_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a table for the sql statement and return the table schema</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">get_postgres_conn</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="n">sql</span><span class="o">.</span><span class="n">SQL</span><span class="p">(</span>
+                <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                CREATE TABLE {} AS ({});</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sql</span><span class="o">.</span><span class="n">Identifier</span><span class="p">(</span><span class="n">table_name</span><span class="p">),</span> <span class="n">sql</span><span class="o">.</span><span class="n">Literal</span><span class="p">(</span><span class="n">sql_query</span><span class="p">),),</span>
+        <span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SELECT * FROM </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2"> LIMIT 1&quot;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,)</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">))</span></div>
+
+
+<span class="n">MULTIPLE_FEATURE_VIEW_POINT_IN_TIME_JOIN</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">/*</span>
+<span class="s2"> Compute a deterministic hash for the `left_table_query_string` that will be used throughout</span>
+<span class="s2"> all the logic as the field to GROUP BY the data</span>
+<span class="s2">*/</span>
+<span class="s2">WITH entity_dataframe AS (</span>
+<span class="s2">    SELECT *,</span>
+<span class="s2">        {{entity_df_event_timestamp_col}} AS entity_timestamp</span>
+<span class="s2">        {</span><span class="si">% f</span><span class="s2">or featureview in featureviews %}</span>
+<span class="s2">            {</span><span class="si">% i</span><span class="s2">f featureview.entities %}</span>
+<span class="s2">            ,(</span>
+<span class="s2">                {</span><span class="si">% f</span><span class="s2">or entity in featureview.entities %}</span>
+<span class="s2">                    CAST({{entity}} as VARCHAR) ||</span>
+<span class="s2">                {</span><span class="si">% e</span><span class="s2">ndfor %}</span>
+<span class="s2">                CAST({{entity_df_event_timestamp_col}} AS VARCHAR)</span>
+<span class="s2">            ) AS {{featureview.name}}__entity_row_unique_id</span>
+<span class="s2">            {</span><span class="si">% e</span><span class="s2">lse %}</span>
+<span class="s2">            ,CAST({{entity_df_event_timestamp_col}} AS VARCHAR) AS {{featureview.name}}__entity_row_unique_id</span>
+<span class="s2">            {</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">        {</span><span class="si">% e</span><span class="s2">ndfor %}</span>
+<span class="s2">    FROM {{ left_table_query_string }}</span>
+<span class="s2">),</span>
+
+<span class="s2">{</span><span class="si">% f</span><span class="s2">or featureview in featureviews %}</span>
+
+<span class="s2">{{ featureview.name }}__entity_dataframe AS (</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        {{ featureview.entities | join(&#39;, &#39;)}}{</span><span class="si">% i</span><span class="s2">f featureview.entities %},{</span><span class="si">% e</span><span class="s2">lse %}{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">        entity_timestamp,</span>
+<span class="s2">        {{featureview.name}}__entity_row_unique_id</span>
+<span class="s2">    FROM entity_dataframe</span>
+<span class="s2">    GROUP BY</span>
+<span class="s2">        {{ featureview.entities | join(&#39;, &#39;)}}{</span><span class="si">% i</span><span class="s2">f featureview.entities %},{</span><span class="si">% e</span><span class="s2">lse %}{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">        entity_timestamp,</span>
+<span class="s2">        {{featureview.name}}__entity_row_unique_id</span>
+<span class="s2">),</span>
+
+<span class="s2">/*</span>
+<span class="s2"> This query template performs the point-in-time correctness join for a single feature set table</span>
+<span class="s2"> to the provided entity table.</span>
+
+<span class="s2"> 1. We first join the current feature_view to the entity dataframe that has been passed.</span>
+<span class="s2"> This JOIN has the following logic:</span>
+<span class="s2">    - For each row of the entity dataframe, only keep the rows where the `event_timestamp_column`</span>
+<span class="s2">    is less than the one provided in the entity dataframe</span>
+<span class="s2">    - If there a TTL for the current feature_view, also keep the rows where the `event_timestamp_column`</span>
+<span class="s2">    is higher the the one provided minus the TTL</span>
+<span class="s2">    - For each row, Join on the entity key and retrieve the `entity_row_unique_id` that has been</span>
+<span class="s2">    computed previously</span>
+
+<span class="s2"> The output of this CTE will contain all the necessary information and already filtered out most</span>
+<span class="s2"> of the data that is not relevant.</span>
+<span class="s2">*/</span>
+
+<span class="s2">{{ featureview.name }}__subquery AS (</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        {{ featureview.event_timestamp_column }} as event_timestamp,</span>
+<span class="s2">        {{ featureview.created_timestamp_column ~ &#39; as created_timestamp,&#39; if featureview.created_timestamp_column else &#39;&#39; }}</span>
+<span class="s2">        {{ featureview.entity_selections | join(&#39;, &#39;)}}{</span><span class="si">% i</span><span class="s2">f featureview.entity_selections %},{</span><span class="si">% e</span><span class="s2">lse %}{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">        {</span><span class="si">% f</span><span class="s2">or feature in featureview.features %}</span>
+<span class="s2">            {{ feature }} as {</span><span class="si">% i</span><span class="s2">f full_feature_names %}{{ featureview.name }}__{{feature}}{</span><span class="si">% e</span><span class="s2">lse %}{{ feature }}{</span><span class="si">% e</span><span class="s2">ndif %}{</span><span class="si">% i</span><span class="s2">f loop.last %}{</span><span class="si">% e</span><span class="s2">lse %}, {</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">        {</span><span class="si">% e</span><span class="s2">ndfor %}</span>
+<span class="s2">    FROM {{ featureview.table_subquery }} sub</span>
+<span class="s2">    WHERE {{ featureview.event_timestamp_column }} &lt;= (SELECT MAX(entity_timestamp) FROM entity_dataframe)</span>
+<span class="s2">    </span>
+<span class="s2">    /*</span>
+<span class="s2">    {</span><span class="si">% i</span><span class="s2">f featureview.ttl == 0 %}{</span><span class="si">% e</span><span class="s2">lse %}</span>
+<span class="s2">    AND {{ featureview.event_timestamp_column }} &gt;= (SELECT MIN(entity_timestamp) FROM entity_dataframe) - {{ featureview.ttl }} * interval &#39;1&#39; second</span>
+<span class="s2">    {</span><span class="si">% e</span><span class="s2">ndif %} </span>
+<span class="s2">    */</span>
+<span class="s2">),</span>
+
+<span class="s2">{{ featureview.name }}__base AS (</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        subquery.*,</span>
+<span class="s2">        entity_dataframe.entity_timestamp,</span>
+<span class="s2">        entity_dataframe.{{featureview.name}}__entity_row_unique_id</span>
+<span class="s2">    FROM {{ featureview.name }}__subquery AS subquery</span>
+<span class="s2">    INNER JOIN {{ featureview.name }}__entity_dataframe AS entity_dataframe</span>
+<span class="s2">    ON TRUE</span>
+<span class="s2">        AND subquery.event_timestamp &lt;= entity_dataframe.entity_timestamp</span>
+
+<span class="s2">        /*</span>
+<span class="s2">        {</span><span class="si">% i</span><span class="s2">f featureview.ttl == 0 %}{</span><span class="si">% e</span><span class="s2">lse %}</span>
+<span class="s2">        AND subquery.event_timestamp &gt;= entity_dataframe.entity_timestamp - {{ featureview.ttl }} * interval &#39;1&#39; second</span>
+<span class="s2">        {</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">        */</span>
+
+<span class="s2">        {</span><span class="si">% f</span><span class="s2">or entity in featureview.entities %}</span>
+<span class="s2">        AND subquery.{{ entity }} = entity_dataframe.{{ entity }}</span>
+<span class="s2">        {</span><span class="si">% e</span><span class="s2">ndfor %}</span>
+<span class="s2">),</span>
+
+<span class="s2">/*</span>
+<span class="s2"> 2. If the `created_timestamp_column` has been set, we need to</span>
+<span class="s2"> deduplicate the data first. This is done by calculating the</span>
+<span class="s2"> `MAX(created_at_timestamp)` for each event_timestamp.</span>
+<span class="s2"> We then join the data on the next CTE</span>
+<span class="s2">*/</span>
+<span class="s2">{</span><span class="si">% i</span><span class="s2">f featureview.created_timestamp_column %}</span>
+<span class="s2">{{ featureview.name }}__dedup AS (</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        {{featureview.name}}__entity_row_unique_id,</span>
+<span class="s2">        event_timestamp,</span>
+<span class="s2">        MAX(created_timestamp) as created_timestamp</span>
+<span class="s2">    FROM {{ featureview.name }}__base</span>
+<span class="s2">    GROUP BY {{featureview.name}}__entity_row_unique_id, event_timestamp</span>
+<span class="s2">),</span>
+<span class="s2">{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+
+<span class="s2">/*</span>
+<span class="s2"> 3. The data has been filtered during the first CTE &quot;*__base&quot;</span>
+<span class="s2"> Thus we only need to compute the latest timestamp of each feature.</span>
+<span class="s2">*/</span>
+<span class="s2">{{ featureview.name }}__latest AS (</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        {{featureview.name}}__entity_row_unique_id,</span>
+<span class="s2">        MAX(event_timestamp) AS event_timestamp</span>
+<span class="s2">        {</span><span class="si">% i</span><span class="s2">f featureview.created_timestamp_column %}</span>
+<span class="s2">            ,MAX(created_timestamp) AS created_timestamp</span>
+<span class="s2">        {</span><span class="si">% e</span><span class="s2">ndif %}</span>
+
+<span class="s2">    FROM {{ featureview.name }}__base</span>
+<span class="s2">    {</span><span class="si">% i</span><span class="s2">f featureview.created_timestamp_column %}</span>
+<span class="s2">        INNER JOIN {{ featureview.name }}__dedup</span>
+<span class="s2">        USING ({{featureview.name}}__entity_row_unique_id, event_timestamp, created_timestamp)</span>
+<span class="s2">    {</span><span class="si">% e</span><span class="s2">ndif %}</span>
+
+<span class="s2">    GROUP BY {{featureview.name}}__entity_row_unique_id</span>
+<span class="s2">),</span>
+
+<span class="s2">/*</span>
+<span class="s2"> 4. Once we know the latest value of each feature for a given timestamp,</span>
+<span class="s2"> we can join again the data back to the original &quot;base&quot; dataset</span>
+<span class="s2">*/</span>
+<span class="s2">{{ featureview.name }}__cleaned AS (</span>
+<span class="s2">    SELECT base.*</span>
+<span class="s2">    FROM {{ featureview.name }}__base as base</span>
+<span class="s2">    INNER JOIN {{ featureview.name }}__latest</span>
+<span class="s2">    USING(</span>
+<span class="s2">        {{featureview.name}}__entity_row_unique_id,</span>
+<span class="s2">        event_timestamp</span>
+<span class="s2">        {</span><span class="si">% i</span><span class="s2">f featureview.created_timestamp_column %}</span>
+<span class="s2">            ,created_timestamp</span>
+<span class="s2">        {</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">    )</span>
+<span class="s2">) {</span><span class="si">% i</span><span class="s2">f loop.last %}{</span><span class="si">% e</span><span class="s2">lse %}, {</span><span class="si">% e</span><span class="s2">ndif %}</span>
+
+
+<span class="s2">{</span><span class="si">% e</span><span class="s2">ndfor %}</span>
+<span class="s2">/*</span>
+<span class="s2"> Joins the outputs of multiple time travel joins to a single table.</span>
+<span class="s2"> The entity_dataframe dataset being our source of truth here.</span>
+<span class="s2"> */</span>
+
+<span class="s2">SELECT *</span>
+<span class="s2">FROM entity_dataframe</span>
+<span class="s2">{</span><span class="si">% f</span><span class="s2">or featureview in featureviews %}</span>
+<span class="s2">LEFT JOIN (</span>
+<span class="s2">    SELECT</span>
+<span class="s2">        {{featureview.name}}__entity_row_unique_id</span>
+<span class="s2">        {</span><span class="si">% f</span><span class="s2">or feature in featureview.features %}</span>
+<span class="s2">            ,{</span><span class="si">% i</span><span class="s2">f full_feature_names %}{{ featureview.name }}__{{feature}}{</span><span class="si">% e</span><span class="s2">lse %}{{ feature }}{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">        {</span><span class="si">% e</span><span class="s2">ndfor %}</span>
+<span class="s2">    FROM {{ featureview.name }}__cleaned</span>
+<span class="s2">) {{featureview.name}} USING ({{featureview.name}}__entity_row_unique_id)</span>
+<span class="s2">{</span><span class="si">% e</span><span class="s2">ndfor %}</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Kfs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">kfs</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Katonic.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
